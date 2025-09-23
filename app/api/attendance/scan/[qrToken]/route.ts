@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server"
 import { getQRToken, deleteQRToken } from "@/lib/attendance-store"
 import { executeQuery } from "@/lib/db"
 
+interface Student {
+  student_id: number;
+  first_name: string;
+  last_name: string;
+}
+
 export async function POST(
   req: NextRequest,
-  { params }: { params: { qrToken: string } }
+  { params }: { params: Promise<{ qrToken: string }> }
 ) {
   try {
-    const { qrToken } = params
+    // Await the params since it's a Promise in the App Router
+    const { qrToken } = await params
     const { student_id } = await req.json()
 
     if (!student_id) {
@@ -30,16 +37,17 @@ export async function POST(
     }
 
     // Verify student is enrolled in this class
-  const studentEnrolled = qrData.students?.some((s) => s.student_id === student_id)
+    const studentEnrolled = qrData.students?.some((s) => s.student_id === student_id)
     if (!studentEnrolled) {
       return NextResponse.json({ error: 'Student not enrolled in this class' }, { status: 403 })
     }
 
     // Get student details
-    const studentResult = await executeQuery`
+    const studentResultResponse = await executeQuery`
       SELECT first_name, last_name FROM students WHERE student_id = ${student_id}
     `
-    
+    const studentResult = studentResultResponse as unknown as Student[]
+
     if (studentResult.length === 0) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
