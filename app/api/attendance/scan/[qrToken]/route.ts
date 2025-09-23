@@ -25,14 +25,6 @@ export async function POST(
     // Get QR token data
     const qrData = await getQRToken(qrToken)
 
-    console.log("Received student_id:", student_id, "Type:", typeof student_id)
-  
-    console.log("QR Data students:", qrData?.students)
-    console.log("Student enrolled check:", qrData?.students?.some((s: any) => {
-      console.log("Comparing:", s.student_id, typeof s.student_id, "with", student_id, typeof student_id)
-      console.log("Equal?", s.student_id === student_id)
-      return s.student_id === student_id
-    }))
     
     if (!qrData) {
       return NextResponse.json({ error: 'Invalid or expired QR code' }, { status: 400 })
@@ -45,6 +37,14 @@ export async function POST(
       await deleteQRToken(qrToken)
       return NextResponse.json({ error: 'QR code has expired' }, { status: 400 })
     }
+
+    console.log("Received student_id:", student_id, "Type:", typeof student_id)
+    console.log("QR Data students:", qrData?.students)
+    console.log("Student enrolled check:", qrData?.students?.some((s) => {
+      console.log("Comparing:", s.student_id, typeof s.student_id, "with", student_id, typeof student_id)
+      console.log("Equal?", s.student_id === student_id)
+      return s.student_id === student_id
+    }))
 
     // Verify student is enrolled in this class
     const studentEnrolled = qrData.students?.some((s) => s.student_id === student_id)
