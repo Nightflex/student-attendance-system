@@ -41,7 +41,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
     setIsLoading(true)
     setError("")
 
-    // Validation based on user type
+    // Validation based on user type - FIXED LOGIC
     if (formData.user_type === "student") {
       if (!formData.roll_number || formData.roll_number.trim().length < 1) {
         setError("Please enter your roll number")
