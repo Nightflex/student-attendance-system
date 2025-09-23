@@ -93,9 +93,32 @@ export function QRGenerator({
 
   const currentClasses = classesBySemester[Number(selectedSemester)] || [];
 
+  // Get selected class data for displaying student list
+  const selectedClassData = currentClasses.find(
+    (c) => c.schedule_id.toString() === selectedClass
+  );
+
   useEffect(() => {
     setSelectedClass("");
+    setAttendanceList([]); // Clear attendance list when semester changes
   }, [selectedSemester]);
+
+  // Initialize attendance list when class is selected
+useEffect(() => {
+  if (selectedClassData) {
+    // Initialize with all students as absent
+    const initialAttendanceList = selectedClassData.students.map(student => ({
+      student_id: student.student_id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      status: "absent" as const,
+      marked_at: undefined  // This fixes the type error
+    }));
+    setAttendanceList(initialAttendanceList);
+  } else {
+    setAttendanceList([]);
+  }
+}, [selectedClassData]);
 
   const stopAttendanceSession = useCallback(() => {
     setIsSessionActive(false);
@@ -130,7 +153,7 @@ export function QRGenerator({
     }
 
     setSessionId("");
-    setAttendanceList([]);
+    // Don't clear attendance list here - keep it for display
   }, [sessionId, teacherId]);
 
   useEffect(() => {
@@ -149,39 +172,38 @@ export function QRGenerator({
     return () => clearInterval(interval);
   }, [isSessionActive, timeRemaining, stopAttendanceSession]);
 
-  // In components/teachers/qr-generator.tsx
-const pollAttendanceUpdates = async (currentSessionId: string) => {
-  try {
-    console.log("Polling attendance for session:", currentSessionId);
-    const response = await fetch(
-      `/api/attendance/session/${currentSessionId}/status`,
-      {
-        headers: {
-          Authorization: `Bearer ${teacherId}`,
-        },
-      }
-    );
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Attendance poll response:", data);
-      console.log("Previous attendance list length:", attendanceList.length);
-      console.log("New attendance list length:", data.attendanceList?.length);
+  const pollAttendanceUpdates = async (currentSessionId: string) => {
+    try {
+      console.log("Polling attendance for session:", currentSessionId);
+      const response = await fetch(
+        `/api/attendance/session/${currentSessionId}/status`,
+        {
+          headers: {
+            Authorization: `Bearer ${teacherId}`,
+          },
+        }
+      );
       
-      // Only update if there's actually new data
-      if (data.attendanceList && JSON.stringify(data.attendanceList) !== JSON.stringify(attendanceList)) {
-        console.log("Updating attendance list with new data");
-        setAttendanceList(data.attendanceList || []);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Attendance poll response:", data);
+        console.log("Previous attendance list length:", attendanceList.length);
+        console.log("New attendance list length:", data.attendanceList?.length);
+        
+        // Only update if there's actually new data
+        if (data.attendanceList && JSON.stringify(data.attendanceList) !== JSON.stringify(attendanceList)) {
+          console.log("Updating attendance list with new data");
+          setAttendanceList(data.attendanceList || []);
+        } else {
+          console.log("No change in attendance data");
+        }
       } else {
-        console.log("No change in attendance data");
+        console.error("Failed to poll attendance:", response.status);
       }
-    } else {
-      console.error("Failed to poll attendance:", response.status);
+    } catch (error) {
+      console.error("Error polling attendance:", error);
     }
-  } catch (error) {
-    console.error("Error polling attendance:", error);
-  }
-};
+  };
 
   const generateSingleQR = async (
     currentSessionId: string,
@@ -277,7 +299,7 @@ const pollAttendanceUpdates = async (currentSessionId: string) => {
 
       const data = await response.json();
       console.log("Session initialized:", data);
-      setAttendanceList(data.attendanceList || []);
+      // Don't set attendance list here since we want to keep the polling updates
       return true;
     } catch (error) {
       console.error("Error initializing session:", error);
@@ -353,9 +375,7 @@ const pollAttendanceUpdates = async (currentSessionId: string) => {
   const availableSemesters = Array.from(
     new Set(allClasses.map((cls) => cls.semester))
   ).sort();
-  const selectedClassData = currentClasses.find(
-    (c) => c.schedule_id.toString() === selectedClass
-  );
+  
   const presentCount = attendanceList.filter(
     (a) => a.status === "present"
   ).length;
@@ -539,12 +559,13 @@ const pollAttendanceUpdates = async (currentSessionId: string) => {
         </CardContent>
       </Card>
 
-      {isSessionActive && selectedClassData && (
+      {/* Show attendance table when class is selected, not just when session is active */}
+      {selectedClassData && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserCheck className="h-5 w-5" />
-              Live Attendance
+              Class Attendance
             </CardTitle>
             <CardDescription>
               {selectedClassData.subject_name} ({selectedClassData.subject_code})
@@ -590,7 +611,7 @@ const pollAttendanceUpdates = async (currentSessionId: string) => {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Users className="h-8 w-8 mx-auto mb-2" />
-                  <p>Waiting for students to scan...</p>
+                  <p>No students enrolled in this class</p>
                 </div>
               )}
             </div>

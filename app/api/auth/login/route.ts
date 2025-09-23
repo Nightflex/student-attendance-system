@@ -1,3 +1,4 @@
+// pages/api/auth/login/route.ts
 import { NextResponse } from "next/server";
 import { authenticateUser } from "@/lib/auth/login";
 import { SignJWT } from "jose";
@@ -28,12 +29,19 @@ export async function POST(request: Request) {
 
     if (loginResult.success && loginResult.user) {
       // Create JWT with jose
-      const token = await new SignJWT({ id: loginResult.user.id, role: loginResult.user.role })
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret-key-change-in-production");
+      
+      const token = await new SignJWT({ 
+        id: loginResult.user.id, 
+        role: loginResult.user.role,
+        email: loginResult.user.email
+      })
         .setProtectedHeader({ alg: "HS256", typ: "JWT" })
         .setIssuedAt()
         .setExpirationTime("24h")
-        .sign(new TextEncoder().encode(process.env.JWT_SECRET!));
+        .sign(secret);
 
+      // Create response
       const response = NextResponse.json<LoginResponse>({
         success: true,
         user: loginResult.user,
@@ -41,12 +49,14 @@ export async function POST(request: Request) {
         message: "Login successful!",
       });
 
+      // Set cookie with Vercel-compatible settings (REMOVE domain setting)
       response.cookies.set("auth-token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: true, // Always true for Vercel
         maxAge: 60 * 60 * 24, // 24 hours
         path: "/",
-        sameSite: "strict",
+        sameSite: "lax",
+        // Remove the domain setting - let browser handle it automatically
       });
 
       return response;
@@ -62,8 +72,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
-// Disallow other methods
-export const GET = () => new Response("Method Not Allowed", { status: 405 });
-export const PUT = () => new Response("Method Not Allowed", { status: 405 });
-export const DELETE = () => new Response("Method Not Allowed", { status: 405 });
