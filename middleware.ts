@@ -1,98 +1,93 @@
 // middleware.ts
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { jwtVerify } from 'jose'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 
 // Define protected routes
 const protectedRoutes = [
-  '/dashboard',
-  '/dashboard/student',
-  '/dashboard/teacher',
-  '/dashboard/admin',
-]
+  "/dashboard",
+  "/dashboard/student",
+  "/dashboard/teacher",
+  "/dashboard/admin",
+];
 
-// Define public routes
+// Define public routes (accessible without login)
 const publicRoutes = [
-  '/',
-  '/auth',
-  '/api/auth/login',
-  '/api/students', // Registration endpoint
-]
+  "/",
+  "/auth",
+  "/api/auth/login",
+  "/api/students", // Registration endpoint
+];
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  
+  const { pathname } = request.nextUrl;
+
+  // Debug logging
+  console.log("🔎 Middleware pathname:", pathname);
+
   // Check if route is public
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname === route || pathname.startsWith(route)
-  )
-  
+  const isPublicRoute = publicRoutes.some(
+    (route) => pathname === route || pathname.startsWith(route)
+  );
+
   // Check if route is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
+  const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
-  )
+  );
 
-  // If it's a public route, allow access
+  // Allow public routes
   if (isPublicRoute) {
-    return NextResponse.next()
+    console.log("✅ Public route, allowing access");
+    return NextResponse.next();
   }
 
-  // If it's not a protected route, allow access
+  // Allow non-protected routes
   if (!isProtectedRoute) {
-    return NextResponse.next()
+    console.log("✅ Non-protected route, allowing access");
+    return NextResponse.next();
   }
 
-  // For protected routes, verify the JWT token from cookies
-  const token = request.cookies.get('auth-token')?.value
+  // For protected routes → check token
+  const token = request.cookies.get("auth-token")?.value;
 
   if (!token) {
-    // Redirect to login if no token
-    const redirectUrl = new URL('/auth', request.url)
-    redirectUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(redirectUrl)
+    console.warn("⚠️ No token found, redirecting to /auth");
+    const redirectUrl = new URL("/auth", request.url);
+    redirectUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 
   try {
-    // Verify the JWT token using jose
     if (!process.env.JWT_SECRET) {
-      throw new Error('JWT_SECRET environment variable is not set')
+      throw new Error("❌ JWT_SECRET environment variable is not set");
     }
 
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-    const { payload } = await jwtVerify(token, secret)
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
 
-    // Add user info to headers for downstream use
-    const requestHeaders = new Headers(request.headers)
-    requestHeaders.set('x-user-id', payload.id as string)
-    requestHeaders.set('x-user-role', payload.role as string)
-    requestHeaders.set('x-user-email', payload.email as string)
+    console.log("✅ JWT verified:", payload);
 
-    // Continue with the request
+    // Add user info to request headers
+    const requestHeaders = new Headers(request.headers);
+    if (payload.id) requestHeaders.set("x-user-id", String(payload.id));
+    if (payload.role) requestHeaders.set("x-user-role", String(payload.role));
+    if (payload.email) requestHeaders.set("x-user-email", String(payload.email));
+
     return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    })
-
+      request: { headers: requestHeaders },
+    });
   } catch (error) {
-    console.error('JWT verification error:', error)
-    // Redirect to login if token is invalid
-    const redirectUrl = new URL('/auth', request.url)
-    redirectUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(redirectUrl)
+    console.error("❌ JWT verification error:", error);
+    const redirectUrl = new URL("/auth", request.url);
+    redirectUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 }
 
-// Configure which paths the middleware should run on
+// ✅ Config: include API protection if you want
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // Match all paths except static files & favicon
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
-}
+};
