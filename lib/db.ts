@@ -1,5 +1,5 @@
 // lib/db.ts
-import { neon } from "@neondatabase/serverless"
+import { neon, NeonQueryFunction } from "@neondatabase/serverless"
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL environment variable is not set")
@@ -38,13 +38,10 @@ export async function executeQuery(strings: TemplateStringsArray, ...values: unk
   }
 }
 
-// Transaction wrapper
 export async function withTransaction<T>(
-  callback: (sql: typeof import("@neondatabase/serverless").neon) => Promise<T>,
+  callback: (sql: NeonQueryFunction<false, false>) => Promise<T>,
 ): Promise<T> {
   try {
-    // Note: Neon serverless doesn't support explicit transactions
-    // but provides ACID guarantees for individual queries
     return await callback(sql)
   } catch (error) {
     handleDatabaseError(error, "execute transaction")

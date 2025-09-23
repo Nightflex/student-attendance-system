@@ -7,14 +7,6 @@ import { LoginForm } from "@/components/Auth/LoginForm"
 import { RegisterForm } from "@/components/Auth/RegisterForm"
 import { User } from "@/lib/types"
 
-interface UserData {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  [key: string]: string | undefined;
-}
-
 export function AuthClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
