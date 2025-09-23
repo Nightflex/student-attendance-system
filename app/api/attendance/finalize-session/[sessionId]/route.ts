@@ -1,57 +1,32 @@
-import { getSession, deleteSession } from "@/lib/attendance-store"
-import { executeQuery } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
+import { getSession, deleteSession } from "@/lib/attendance-store"
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const { sessionId } = params
+    // Await the params since it's a Promise in the App Router
+    const { sessionId } = await params
     
-    // Get session data
+    // Verify teacher authorization
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get session data to verify ownership
     const sessionData = await getSession(sessionId)
     if (!sessionData) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    // Verify teacher authorization
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ') || authHeader.substring(7) !== sessionData.teacherId) {
+    const teacherId = authHeader.substring(7)
+    if (teacherId !== sessionData.teacherId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Mark all remaining students as absent if not already marked
-    const currentDate = sessionData.date
-    const currentYear = new Date().getFullYear()
-    const batchYear = currentYear - Math.floor((sessionData.semester - 1) / 2)
-
-    for (const student of sessionData.students) {
-      // Use UPSERT to prevent race conditions
-      await executeQuery`
-        INSERT INTO attendance (
-          teacher_id, 
-          subject_id, 
-          semester, 
-          batch_year, 
-          student_id, 
-          attendance_date, 
-          status
-        )
-        VALUES (
-          ${parseInt(sessionData.teacherId)},
-          ${sessionData.subjectId},
-          ${sessionData.semester},
-          ${batchYear},
-          ${student.student_id},
-          ${currentDate},
-          'absent'
-        )
-        ON DUPLICATE KEY UPDATE status = VALUES(status)
-      `
-    }
-
-    // Clean up session data
+    // Delete the session
     await deleteSession(sessionId)
 
     return NextResponse.json({ 
