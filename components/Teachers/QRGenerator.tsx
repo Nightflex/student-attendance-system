@@ -1,21 +1,23 @@
+// components/teachers/qr-generator.tsx
 "use client"
 import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import QRCodeLib from "qrcode"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { QrCode, RefreshCw, Clock, Users, Download, Shield, CheckCircle, UserCheck } from "lucide-react"
+import { QrCode, RefreshCw, Clock, Users, Download, CheckCircle, UserCheck } from "lucide-react"
 
 interface QRGeneratorProps {
   teacherId: string
   allClasses: ClassData[]
   classesBySemester: Record<number, ClassData[]>
-  onQRGenerated?: (qrData: any) => void
+  onQRGenerated?: (qrData: unknown) => void
 }
 
-interface ClassData {
+export interface ClassData {
   schedule_id: number
   subject_id: number
   subject_name: string
@@ -32,7 +34,37 @@ interface AttendanceStatus {
   marked_at?: string
 }
 
+interface QRTokenData {
+  sessionId: string
+  qrToken: string
+  assignmentId: number
+  subjectId: number
+  teacherId: string
+  semester: number
+  qrNumber: number
+  generatedAt: string
+  expiresAt: string
+  type: string
+  scanUrl: string
+}
+
 export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGenerated }: QRGeneratorProps) {
+  // Always initialize hooks at the top level
+  const [selectedSemester, setSelectedSemester] = useState<string>("1")
+  const [selectedClass, setSelectedClass] = useState<string>("")
+  const [qrDataURL, setQrDataURL] = useState<string>("")
+  const [isSessionActive, setIsSessionActive] = useState(false)
+  const [currentQRNumber, setCurrentQRNumber] = useState(0)
+  const [timeRemaining, setTimeRemaining] = useState<number>(0)
+  const [sessionId, setSessionId] = useState<string>("")
+  const [attendanceList, setAttendanceList] = useState<AttendanceStatus[]>([])
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
+  const regenerationIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const attendancePollingRef = useRef<NodeJS.Timeout | null>(null)
+  
+  const sessionDuration = 480 // 8 minutes in seconds
+  const qrLifetime = 3 // 3 seconds per QR code
+
   if (!teacherId) {
     return (
       <Card>
@@ -50,20 +82,6 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
       </Card>
     )
   }
-
-  const [selectedSemester, setSelectedSemester] = useState<string>("1")
-  const [selectedClass, setSelectedClass] = useState<string>("")
-  const [qrDataURL, setQrDataURL] = useState<string>("")
-  const [isSessionActive, setIsSessionActive] = useState(false)
-  const [currentQRNumber, setCurrentQRNumber] = useState(0)
-  const [timeRemaining, setTimeRemaining] = useState<number>(0)
-  const [sessionId, setSessionId] = useState<string>("")
-  const [attendanceList, setAttendanceList] = useState<AttendanceStatus[]>([])
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false)
-  const regenerationIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const attendancePollingRef = useRef<NodeJS.Timeout | null>(null)
-  const sessionDuration = 480 // 8 minutes in seconds
-  const qrLifetime = 3 // 3 seconds per QR code
 
   const currentClasses = classesBySemester[Number(selectedSemester)] || []
 
@@ -87,7 +105,7 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
     return () => clearInterval(interval)
   }, [isSessionActive, timeRemaining])
 
-  const pollAttendanceUpdates = async (currentSessionId: string, subjectId: number) => {
+  const pollAttendanceUpdates = async (currentSessionId: string) => {
     try {
       const response = await fetch(`/api/attendance/session/${currentSessionId}/status`, {
         headers: {
@@ -112,7 +130,7 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
     try {
       const qrToken = `${currentSessionId}_${qrNumber}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
-      const attendanceData = {
+      const attendanceData: QRTokenData = {
         sessionId: currentSessionId,
         qrToken,
         assignmentId: selectedClassData.schedule_id,
@@ -123,10 +141,10 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
         generatedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + qrLifetime * 1000).toISOString(),
         type: "attendance",
+        scanUrl: `/api/attendance/scan/${qrToken}`
       }
 
-      const scanUrl = `/api/attendance/scan/${qrToken}`
-      const qrString = JSON.stringify({ ...attendanceData, scanUrl })
+      const qrString = JSON.stringify(attendanceData)
       
       // Register QR token first
       const registerResponse = await fetch('/api/attendance/register-qr', {
@@ -224,7 +242,7 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
 
     // Poll for attendance updates every 2 seconds
     attendancePollingRef.current = setInterval(() => {
-      pollAttendanceUpdates(newSessionId, selectedClassData.subject_id)
+      pollAttendanceUpdates(newSessionId)
     }, 2000)
   }
 
@@ -344,7 +362,16 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
           <div className="aspect-square bg-white border-2 border-dashed rounded-lg flex items-center justify-center relative">
             {isSessionActive && qrDataURL ? (
               <div className="text-center">
-                <img src={qrDataURL} alt="QR Code" className="w-48 h-48 mx-auto" />
+                {/* Using next/image as recommended */}
+                <div className="w-48 h-48 mx-auto flex items-center justify-center">
+                  <Image 
+                    src={qrDataURL} 
+                    alt="QR Code" 
+                    width={192} 
+                    height={192}
+                    unoptimized
+                  />
+                </div>
                 <p className="text-xs text-gray-500 mt-2">
                   Expires in {qrLifetime} seconds • Auto-refreshing
                 </p>

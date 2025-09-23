@@ -5,6 +5,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { jwtVerify } from "jose";
 
+interface JWTPayload {
+  role: string;
+  id: string;
+  [key: string]: unknown;
+}
+
 export default async function AuthPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth-token")?.value;
@@ -12,10 +18,10 @@ export default async function AuthPage() {
   if (token) {
     try {
       // Verify token using jose
-      const { payload }: any = await jwtVerify(
+      const { payload } = await jwtVerify(
         token,
         new TextEncoder().encode(process.env.JWT_SECRET!)
-      );
+      ) as { payload: JWTPayload };
 
       console.log("User role:", payload.role);
 

@@ -25,10 +25,14 @@ export function handleDatabaseError(error: unknown, operation: string): never {
   throw new DatabaseError(`Failed to ${operation}`, error)
 }
 
-export async function executeQuery(strings: TemplateStringsArray, ...values: any[]): Promise<any[]> {
+interface QueryResult {
+  [key: string]: any;
+}
+
+export async function executeQuery(strings: TemplateStringsArray, ...values: unknown[]): Promise<QueryResult[]> {
   try {
     const result = await sql(strings, ...values)
-    return result as any[]
+    return result as QueryResult[]
   } catch (error) {
     handleDatabaseError(error, "execute query")
   }

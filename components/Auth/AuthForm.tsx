@@ -8,12 +8,43 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Mail, Phone, BookOpen, Calendar, GraduationCap, User } from "lucide-react"
 
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  roll_number: string;
+  department: string;
+  semester: string;
+  batch_year: string;
+  role: string;
+  course_id: number;
+}
+
 interface AuthFormsProps {
-  onLogin: (userData: any) => void
+  onLogin: (userData: UserData) => void
+}
+
+interface Course {
+  course_id: number;
+  course_name: string;
+  course_code: string;
+}
+
+interface FormData {
+  email: string;
+  password: string;
+  confirm_password: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  roll_number: string;
+  course_id: string;
+  semester: string;
+  batch_year: string;
 }
 
 // Mock course data
-const mockCourses = [
+const mockCourses: Course[] = [
   { course_id: 1, course_name: "Computer Science", course_code: "CS" },
   { course_id: 2, course_name: "Mathematics", course_code: "MATH" },
   { course_id: 3, course_name: "Physics", course_code: "PHYS" },
@@ -28,7 +59,7 @@ export function AuthForms({ onLogin }: AuthFormsProps) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     email: "",
     password: "",
     confirm_password: "",
@@ -60,7 +91,7 @@ export function AuthForms({ onLogin }: AuthFormsProps) {
         // Mock login logic
         setTimeout(() => {
           // Mock user data
-          const mockUser = {
+          const mockUser: UserData = {
             id: "1",
             name: `${formData.first_name || "Alex"} ${formData.last_name || "Johnson"}`,
             email: formData.email,
@@ -123,8 +154,9 @@ export function AuthForms({ onLogin }: AuthFormsProps) {
           setIsLoading(false)
         }, 800)
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.")
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message || "An error occurred. Please try again.")
       setIsLoading(false)
     }
   }

@@ -74,6 +74,20 @@ interface TeacherDashboardClientProps {
   classesBySemester: Record<number, ClassData[]>
 }
 
+interface QRData {
+  sessionId: string
+  qrToken: string
+  assignmentId: number
+  subjectId: number
+  teacherId: string
+  semester: number
+  qrNumber: number
+  generatedAt: string
+  expiresAt: string
+  type: string
+  scanUrl: string
+}
+
 export function TeacherDashboardClient({ user, allClasses, classesBySemester }: TeacherDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<"qr-generator" | "attendance">("qr-generator")
   
@@ -85,12 +99,13 @@ export function TeacherDashboardClient({ user, allClasses, classesBySemester }: 
   })
   
   // Handle QR generation callback
-  const handleQRGenerated = (qrData: any) => {
+  const handleQRGenerated = (qrData: QRData) => {
     console.log("QR Code generated:", qrData)
     // You can add additional logic here if needed
   }
 
   // Filter mock classes for ManualAttendance (you can update this to use real data later)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const teacherClassData = mockClasses.filter(cls =>
     cls.teacherId?.toString() === user?.teacherId?.toString()
   )
@@ -119,7 +134,6 @@ export function TeacherDashboardClient({ user, allClasses, classesBySemester }: 
           teacherId={user.teacherId.toString()}
           allClasses={allClasses}
           classesBySemester={classesBySemester}
-          onQRGenerated={handleQRGenerated}
         />
       ) : (
         <ManualAttendance 

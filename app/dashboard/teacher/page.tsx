@@ -6,6 +6,26 @@ import { cookies } from 'next/headers';
 import { executeQuery } from '@/lib/db';
 import { jwtVerify } from 'jose';
 
+interface JWTPayload {
+  role: string;
+  id: string;
+  [key: string]: unknown;
+}
+
+interface TeacherRow {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  department_id: number;
+  designation: string | null;
+  phone_number: string | null;
+}
+
+interface DepartmentRow {
+  department_name: string;
+}
+
 interface ClassData {
   schedule_id: number; // This is now assignment_id from teacher_subject_assignments
   subject_id: number;
@@ -23,11 +43,11 @@ export default async function TeacherDashboardPage() {
     throw new Error("No token found — should have been caught by middleware");
   }
   
-  let payload: any;
+  let payload: JWTPayload;
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload: verifiedPayload } = await jwtVerify(token.value, secret);
-    payload = verifiedPayload;
+    payload = verifiedPayload as JWTPayload;
   } catch (error) {
     throw new Error("Invalid token — should have been caught by middleware");
   }
@@ -49,7 +69,7 @@ export default async function TeacherDashboardPage() {
       phone_number
     FROM teachers
     WHERE teacher_id = ${Number(payload.id)} AND is_active = true
-  `;
+  ` as TeacherRow[];
   
   if (teacherRows.length === 0) {
     throw new Error("Teacher not found — middleware should block this case");
@@ -61,7 +81,7 @@ export default async function TeacherDashboardPage() {
     SELECT department_name
     FROM departments
     WHERE department_id = ${teacher.department_id}
-  `;
+  ` as DepartmentRow[];
   
   const department = deptRows[0] || { department_name: "Unknown Department" };
   
@@ -93,7 +113,7 @@ export default async function TeacherDashboardPage() {
     WHERE tsa.teacher_id = ${teacher.id}
     GROUP BY tsa.assignment_id, s.subject_id, s.subject_name, s.subject_code, tsa.semester
     ORDER BY tsa.semester, s.subject_name
-  `;
+  ` as ClassData[];
   
   // Group classes by semester for easier filtering
   const classesBySemester: Record<number, ClassData[]> = {};
@@ -110,7 +130,7 @@ export default async function TeacherDashboardPage() {
     email: teacher.email,
     teacherId: Number(teacher.id), // Ensure this is always a number
     department: department.department_name,
-    designation: teacher.designation,
+    designation: teacher.designation ?? undefined,
     phone_number: teacher.phone_number,
     role: payload.role, // "teacher" or "admin"
   };

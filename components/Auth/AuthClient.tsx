@@ -6,13 +6,21 @@ import { AuthLayout } from "@/components/Auth/AuthLayout"
 import { LoginForm } from "@/components/Auth/LoginForm"
 import { RegisterForm } from "@/components/Auth/RegisterForm"
 
+interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  [key: string]: string | undefined;
+}
+
 export function AuthClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLogin, setIsLogin] = useState(true)
   const redirectUrl = searchParams.get('redirect') || '/dashboard/student'
 
-  const handleLogin = (userData: any) => {
+  const handleLogin = (userData: UserData) => {
     // In a real app, you would:
     // 1. Make API call to authenticate
     // 2. Store token in cookies/session

@@ -35,6 +35,14 @@ export interface SessionData {
   }>
 }
 
+interface AttendanceListItem {
+  student_id: number
+  first_name: string
+  last_name: string
+  status: 'present' | 'absent'
+  marked_at: string | null
+}
+
 // Global stores (in-memory - use Redis in production)
 export const activeQRTokens = new Map<string, QRTokenData>()
 export const activeSessions = new Map<string, SessionData>()
@@ -89,7 +97,7 @@ export function getSession(sessionId: string): SessionData | null {
   return activeSessions.get(sessionId) || null
 }
 
-export function updateSessionAttendance(sessionId: string, attendanceList: any[]): void {
+export function updateSessionAttendance(sessionId: string, attendanceList: AttendanceListItem[]): void {
   const session = activeSessions.get(sessionId)
   if (session) {
     session.attendanceList = attendanceList

@@ -20,27 +20,6 @@ interface User {
   teacherId?: number
 }
 
-// Mock data for admin dashboard
-const mockAdminData = {
-  totalStudents: 1247,
-  totalTeachers: 89,
-  totalClasses: 156,
-  attendanceRate: 92.5,
-  departments: [
-    { id: 1, name: "Computer Science", studentCount: 342, teacherCount: 12 },
-    { id: 2, name: "Mathematics", studentCount: 278, teacherCount: 8 },
-    { id: 3, name: "Physics", studentCount: 198, teacherCount: 6 },
-    { id: 4, name: "Chemistry", studentCount: 167, teacherCount: 7 },
-    { id: 5, name: "Biology", studentCount: 142, teacherCount: 5 },
-  ],
-  recentActivities: [
-    { id: 1, type: "user_login", message: "Dr. Sarah Wilson logged in", timestamp: "2 minutes ago", status: "success" },
-    { id: 2, type: "qr_generated", message: "QR code generated for CS201", timestamp: "5 minutes ago", status: "info" },
-    { id: 3, type: "attendance_marked", message: "24 students marked attendance in MATH101", timestamp: "8 minutes ago", status: "success" },
-    { id: 4, type: "low_attendance", message: "Low attendance alert for PHYS102 (65%)", timestamp: "15 minutes ago", status: "warning" },
-  ]
-}
-
 export function AdminPortal({ user }: { user: User | null }) {
   const [activeTab, setActiveTab] = useState<"analytics" | "teachers">("analytics")
 

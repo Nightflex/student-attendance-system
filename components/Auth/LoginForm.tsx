@@ -8,12 +8,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Eye, EyeOff, Mail, User } from "lucide-react"
 import axios from "axios"
-import type { LoginRequest, LoginResponse } from "@/lib/types"
+import type { LoginRequest, LoginResponse, User as UserType } from "@/lib/types"
 import { useRouter } from "next/navigation"
 
 interface LoginFormProps {
-  onLogin: (userData: any) => void
+  onLogin: (userData: UserType) => void
   onSwitchToRegister: () => void
+}
+
+interface AxiosError {
+  response?: {
+    data: {
+      message?: string
+    }
+  }
 }
 
 export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
@@ -50,33 +58,38 @@ export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
       if (response.data.success && response.data.token) {
         // The token is now set in cookies by the API, so we don't need to store it in localStorage
         // Just pass the user data to the parent component
-        onLogin(response.data.user)
-        
-        // Redirect based on user role
-        if (response.data.user && response.data.user.role) {
-          switch (response.data.user.role) {
-            case 'student':
-              router.push('/dashboard/student')
-              break
-            case 'teacher':
-              router.push('/dashboard/teacher')
-              break
-            case 'admin':
-              router.push('/dashboard/admin')
-              break
-            default:
-              router.push('/dashboard')
+        if (response.data.user) {
+          onLogin(response.data.user)
+          
+          // Redirect based on user role
+          if (response.data.user.role) {
+            switch (response.data.user.role) {
+              case 'student':
+                router.push('/dashboard/student')
+                break
+              case 'teacher':
+                router.push('/dashboard/teacher')
+                break
+              case 'admin':
+                router.push('/dashboard/admin')
+                break
+              default:
+                router.push('/dashboard')
+            }
+          } else {
+            router.push('/dashboard')
           }
         } else {
-          router.push('/dashboard')
+          setError("User data missing in response.")
         }
       } else {
         setError(response.data.message || "Login failed")
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Login error:", err)
-      if (err.response?.data?.message) {
-        setError(err.response.data.message)
+      const axiosError = err as AxiosError;
+      if (axiosError.response?.data?.message) {
+        setError(axiosError.response.data.message)
       } else {
         setError("Network error. Please check your connection and try again.")
       }
@@ -187,7 +200,7 @@ export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">Don't have an account?</p>
+          <p className="text-sm text-muted-foreground">Don&apos;t have an account?</p>
           <Button
             variant="link"
             className="p-0 h-auto font-semibold"

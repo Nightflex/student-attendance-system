@@ -22,8 +22,24 @@ interface User {
   teacherId?: number
 }
 
+interface ClassSchedule {
+  day: string
+  startTime: string
+  endTime: string
+}
+
+interface Class {
+  id: string
+  name: string
+  code: string
+  teacherName?: string
+  location?: string
+  schedule?: ClassSchedule[]
+  students?: string[]
+}
+
 // Mock data
-const mockClasses = [
+const mockClasses: Class[] = [
   {
     id: "1",
     name: "Data Structures",
@@ -63,12 +79,11 @@ const mockClasses = [
 ]
 
 export function StudentPortal({ user }: { user: User | null }) {
-  const [scanSuccess, setScanSuccess] = useState(false)
   const [activeTab, setActiveTab] = useState<"scanner" | "history">("scanner")
 
-  const handleScanSuccess = (data: string) => {
-    setScanSuccess(true)
-    setTimeout(() => setScanSuccess(false), 3000)
+  const handleScanSuccess = (data: any) => {
+    // Handle scan success logic here
+    console.log("Scan successful:", data)
   }
 
   const handleScanError = (error: string) => {
@@ -134,7 +149,11 @@ export function StudentPortal({ user }: { user: User | null }) {
       {activeTab === "scanner" ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="lg:col-span-2">
-            <QRScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
+            <QRScanner 
+              studentId={user?.id || "1"} 
+              onScanSuccess={handleScanSuccess} 
+              onScanError={handleScanError} 
+            />
           </div>
 
           <div className="space-y-4 sm:space-y-6">
@@ -142,7 +161,7 @@ export function StudentPortal({ user }: { user: User | null }) {
               <CardHeader className="pb-3 sm:pb-4">
                 <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
                   <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  Today's Schedule
+                  Today&apos;s Schedule
                 </CardTitle>
                 <CardDescription className="text-sm">
                   {new Date().toLocaleDateString('en-US', { 

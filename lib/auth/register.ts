@@ -3,6 +3,30 @@ import bcrypt from 'bcryptjs';
 import { executeQuery } from '@/lib/db';
 import type { CreateStudentRequest, Student } from '@/lib/types'; // Adjust path if needed
 
+interface DatabaseError extends Error {
+  message: string;
+}
+
+interface NewStudent {
+  student_id: number;
+  first_name: string;
+  last_name: string;
+  roll_number: string;
+  email: string;
+  phone_number: string | null;
+  course_id: number;
+  semester: number;
+  batch_year: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CourseDetails {
+  course_name: string;
+  course_code: string;
+}
+
 /**
  * Registers a new student.
  * Hashes the password and saves the student data to the database.
@@ -29,7 +53,7 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
     // 3. Check for existing email (prevent duplicates)
     const [existingEmail] = await executeQuery`
       SELECT student_id FROM students WHERE email = ${email}
-    `;
+    ` as { student_id: number }[];
     if (existingEmail) {
       throw new Error("A student with this email already exists.");
     }
@@ -38,7 +62,7 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
     // This is crucial since roll_number is supposed to be unique.
     const [existingRoll] = await executeQuery`
       SELECT student_id FROM students WHERE roll_number = ${rollNumber}
-    `;
+    ` as { student_id: number }[];
     if (existingRoll) {
         throw new Error("A student with this roll number already exists.");
     }
@@ -73,7 +97,7 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
         is_active,
         created_at,
         updated_at
-    `;
+    ` as NewStudent[];
 
     if (!newStudent) {
         // This indicates a problem with the INSERT, though it shouldn't happen if the query is valid.
@@ -86,7 +110,7 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
       SELECT course_name, course_code
       FROM courses
       WHERE course_id = ${newStudent.course_id}
-    `;
+    ` as CourseDetails[];
 
     // 8. Construct and return the Student object
     // This object should match your `Student` type definition (excluding password_hash).
@@ -111,8 +135,9 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
 
     return studentResponse;
 
-  } catch (error: any) {
-    console.error("Register Student Library Function Error:", error);
+  } catch (error) {
+    const dbError = error as DatabaseError;
+    console.error("Register Student Library Function Error:", dbError);
     // Re-throw the error so the API route can catch and handle it appropriately.
     // Specific errors like "already exists" can be handled differently by the API.
     throw error;

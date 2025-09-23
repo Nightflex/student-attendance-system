@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db"
 import { getSession, updateSessionAttendance } from "@/lib/attendance-store"
 
+interface Student {
+  student_id: number;
+  first_name: string;
+  last_name: string;
+}
+
+interface AttendanceRecord {
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  attendance_date: string;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { sessionId: string } }
@@ -39,14 +53,14 @@ export async function GET(
     `
 
     // Create a map of attendance records
-    const attendanceMap = new Map()
-    attendanceRecords.forEach((record: any) => {
+    const attendanceMap = new Map<string, AttendanceRecord>()
+    attendanceRecords.forEach((record: AttendanceRecord) => {
       attendanceMap.set(record.student_id, record)
     })
 
     // Update attendance list with current status
-    const updatedAttendanceList = sessionData.students.map((student: any) => {
-      const attendanceRecord = attendanceMap.get(student.student_id)
+    const updatedAttendanceList = sessionData.students.map((student: Student) => {
+      const attendanceRecord = attendanceMap.get(student.student_id.toString())
       return {
         student_id: student.student_id,
         first_name: student.first_name,

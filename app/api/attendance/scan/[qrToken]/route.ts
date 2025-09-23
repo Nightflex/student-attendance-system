@@ -30,7 +30,7 @@ export async function POST(
     }
 
     // Verify student is enrolled in this class
-    const studentEnrolled = qrData.students?.some((s: any) => s.student_id === student_id)
+  const studentEnrolled = qrData.students?.some((s) => s.student_id === student_id)
     if (!studentEnrolled) {
       return NextResponse.json({ error: 'Student not enrolled in this class' }, { status: 403 })
     }

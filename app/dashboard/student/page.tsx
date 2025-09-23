@@ -7,6 +7,29 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { logout } from "@/lib/data/logout";
 
+interface JWTPayload {
+  role: string;
+  id: string;
+  [key: string]: unknown;
+}
+
+interface StudentRow {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  roll_number: string;
+  course_id: number;
+  semester: number | null;
+  batch_year: number | null;
+  phone_number: string | null;
+}
+
+interface CourseRow {
+  course_name: string;
+  course_code: string;
+}
+
 export default async function StudentDashboardPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth-token")?.value;
@@ -15,11 +38,11 @@ export default async function StudentDashboardPage() {
     throw new Error("No token found — should have been caught by middleware");
   }
 
-  let payload: any;
+  let payload: JWTPayload;
   try {
     // Verify token with jose
     const verified = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET!));
-    payload = verified.payload;
+    payload = verified.payload as JWTPayload;
   } catch (error) {
     throw new Error("Invalid token — should have been caught by middleware");
   }
@@ -41,7 +64,7 @@ export default async function StudentDashboardPage() {
       phone_number
     FROM students
     WHERE student_id = ${Number(payload.id)} AND is_active = true
-  `;
+  ` as StudentRow[];
 
   if (studentRows.length === 0) {
     throw new Error("Student not found — middleware should block this case");
@@ -53,7 +76,7 @@ export default async function StudentDashboardPage() {
     SELECT course_name, course_code
     FROM courses
     WHERE course_id = ${student.course_id}
-  `;
+  ` as CourseRow[];
 
   const course = courseRows[0] || { course_name: "Unknown", course_code: "" };
 

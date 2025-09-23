@@ -72,7 +72,7 @@ export function LandingPage() {
               Revolutionize Attendance Management with Smart QR Technology
             </h1>
             <p className="text-base sm:text-xl text-muted-foreground text-pretty mb-6 sm:mb-8 max-w-2xl mx-auto">
-              Streamline your educational institution's attendance tracking with our modern, secure, and user-friendly
+              Streamline your educational institution&apos;s attendance tracking with our modern, secure, and user-friendly
               QR code-based system. Real-time insights, seamless integration, and 99.9% accuracy.
             </p>
             <div className="flex justify-center">
@@ -239,8 +239,8 @@ export function LandingPage() {
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  "EduAttend has transformed our attendance management. The QR system is incredibly fast and our
-                  teachers love the real-time insights."
+                  &quot;EduAttend has transformed our attendance management. The QR system is incredibly fast and our
+                  teachers love the real-time insights.&quot;
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -262,8 +262,8 @@ export function LandingPage() {
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  "The analytics dashboard gives us unprecedented visibility into attendance patterns. It's helped us
-                  improve student engagement significantly."
+                  &quot;The analytics dashboard gives us unprecedented visibility into attendance patterns. It&apos;s helped us
+                  improve student engagement significantly.&quot;
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -285,8 +285,8 @@ export function LandingPage() {
                   ))}
                 </div>
                 <p className="text-muted-foreground mb-4">
-                  "Students find it so easy to use. No more paper rolls or manual tracking. The system just works
-                  seamlessly every single day."
+                  &quot;Students find it so easy to use. No more paper rolls or manual tracking. The system just works
+                  seamlessly every single day.&quot;
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">

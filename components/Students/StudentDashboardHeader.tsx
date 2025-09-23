@@ -1,7 +1,6 @@
 "use client"
 
 import { Users } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 
 interface User {
   id: string

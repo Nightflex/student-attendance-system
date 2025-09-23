@@ -9,8 +9,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = authHeader.substring(7)
-    // Add JWT verification here if using JWT tokens
+  // const token = authHeader.substring(7) // Reserved for JWT verification
+  // Add JWT verification here if using JWT tokens
     
     const qrData: QRTokenData = await req.json()
     const { qrToken, sessionId, teacherId, subjectId, semester, assignmentId, expiresAt, qrNumber, students } = qrData

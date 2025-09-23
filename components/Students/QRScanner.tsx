@@ -1,3 +1,4 @@
+// components/students/qr-scanner.tsx
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -9,17 +10,26 @@ import QrScanner from "qr-scanner"
 
 interface QRScannerProps {
   studentId: string
-  onScanSuccess?: (data: any) => void
+  onScanSuccess?: (data: unknown) => void
   onScanError?: (error: string) => void
+}
+
+interface AttendanceData {
+  type: string
+  qrToken: string
+  expiresAt: string
+  [key: string]: unknown
+}
+
+interface ScanResult {
+  type: "success" | "error" | null
+  message: string
+  timestamp?: string
 }
 
 export function QRScanner({ studentId, onScanSuccess, onScanError }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
-  const [scanResult, setScanResult] = useState<{
-    type: "success" | "error" | null
-    message: string
-    timestamp?: string
-  }>({ type: null, message: "" })
+  const [scanResult, setScanResult] = useState<ScanResult>({ type: null, message: "" })
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
@@ -45,7 +55,7 @@ export function QRScanner({ studentId, onScanSuccess, onScanError }: QRScannerPr
     setIsProcessing(true)
     
     try {
-      const attendanceData = JSON.parse(qrData)
+      const attendanceData: AttendanceData = JSON.parse(qrData)
       
       if (attendanceData.type !== "attendance" || !attendanceData.qrToken) {
         throw new Error("Invalid QR code. Please scan the attendance QR code from your teacher.")
@@ -53,7 +63,7 @@ export function QRScanner({ studentId, onScanSuccess, onScanError }: QRScannerPr
 
       // Verify QR token hasn't expired
       const now = new Date()
-      const expiresAt = new Date(attendanceData.expiresAt)
+      const expiresAt = new Date(attendanceData.expiresAt as string)
       if (now > expiresAt) {
         throw new Error("QR code has expired. Please scan the new QR code.")
       }

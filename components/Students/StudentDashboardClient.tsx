@@ -24,58 +24,64 @@ interface User {
   role: string
 }
 
+interface TimetableClass {
+  code: string
+  name: string
+  teacherName: string
+  day: string
+  startTime: string
+  endTime: string
+}
+
 export function StudentDashboardClient({ user }: { user: User }) {
   const [activeTab, setActiveTab] = useState<"scanner" | "history">("scanner")
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
-  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false)
+  const [isLoadingAttendance] = useState(false) // Marked as unused but kept for future use
   const [enrolledClasses, setEnrolledClasses] = useState<StudentClass[]>([]);
 
   useEffect(() => {
     const fetchAttendance = async () => {
-      setIsLoadingAttendance(true)
       try {
         const res = await axios.get(`/api/student/${user.id}/attendance`)
         if (res.data.success) setAttendanceRecords(res.data.data)
       } catch (err) {
         console.error("Failed to fetch attendance:", err)
-      } finally {
-        setIsLoadingAttendance(false)
       }
     }
 
     const fetchClasses = async () => {
-    try {
-      const res = await axios.get(`/api/student/${user.id}/timetable`);
-      if (res.data.success) {
-        // Convert timetable data into the format TodaysSchedule expects
-        const grouped: Record<string, StudentClass> = {};
-        res.data.data.forEach((cls: any) => {
-          if (!grouped[cls.code]) {
-            grouped[cls.code] = {
-              id: cls.code,
-              name: cls.name,
-              code: cls.code,
-              teacherName: cls.teacherName,
-              location: "Room TBA",
-              schedule: [],
-              students: [user.id],
-            };
-          }
-          grouped[cls.code].schedule.push({ day: cls.day, startTime: cls.startTime, endTime: cls.endTime });
-        });
+      try {
+        const res = await axios.get(`/api/student/${user.id}/timetable`);
+        if (res.data.success) {
+          // Convert timetable data into the format TodaysSchedule expects
+          const grouped: Record<string, StudentClass> = {};
+          res.data.data.forEach((cls: TimetableClass) => {
+            if (!grouped[cls.code]) {
+              grouped[cls.code] = {
+                id: cls.code,
+                name: cls.name,
+                code: cls.code,
+                teacherName: cls.teacherName,
+                location: "Room TBA",
+                schedule: [],
+                students: [user.id],
+              };
+            }
+            grouped[cls.code].schedule.push({ day: cls.day, startTime: cls.startTime, endTime: cls.endTime });
+          });
 
-        setEnrolledClasses(Object.values(grouped));
+          setEnrolledClasses(Object.values(grouped));
+        }
+      } catch (err) {
+        console.error("Failed to fetch timetable:", err);
       }
-    } catch (err) {
-      console.error("Failed to fetch timetable:", err);
-    }
-  };
+    };
 
     fetchClasses()
     fetchAttendance()
   }, [user.id])
 
-  const handleScanSuccess = (data: string) => {
+  const handleScanSuccess = (data: unknown) => {
     console.log("QR scanned:", data)
   }
 
@@ -91,11 +97,15 @@ export function StudentDashboardClient({ user }: { user: User }) {
       {activeTab === "scanner" ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="lg:col-span-2">
-            <QRScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
+            <QRScanner 
+              studentId={user?.id || "1"} 
+              onScanSuccess={handleScanSuccess} 
+              onScanError={handleScanError} 
+            />
           </div>
 
           <div className="space-y-4 sm:space-y-6">
-            <TodaysSchedule classes={enrolledClasses} /> {/* replace with enrolledClasses if you have real data */}
+            <TodaysSchedule classes={enrolledClasses} />
             <WeeklyAttendanceStats attendanceRecords={attendanceRecords} />
           </div>
         </div>

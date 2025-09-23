@@ -33,7 +33,7 @@ export function TodaysSchedule({ classes }: { classes: StudentClass[] }) {
       <CardHeader className="pb-3 sm:pb-4">
         <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
           <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-          Today's Schedule
+          Today&apos;s Schedule
         </CardTitle>
         <CardDescription className="text-sm">
           {new Date().toLocaleDateString('en-US', { 

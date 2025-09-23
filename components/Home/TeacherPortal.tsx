@@ -21,56 +21,72 @@ interface User {
   teacherId?: number
 }
 
+interface ClassData {
+  schedule_id: number
+  subject_id: number
+  subject_name: string
+  subject_code: string
+  semester: number
+  students: { student_id: number; first_name: string; last_name: string }[]
+}
+
 // Mock data
-const mockClasses = [
+const mockClasses: ClassData[] = [
   {
-    id: "1",
-    name: "Data Structures",
-    code: "CS201",
-    teacherId: "1",
-    teacherName: "Dr. Sarah Wilson",
-    schedule: [
-      { day: "Monday", startTime: "09:00", endTime: "10:30" },
-      { day: "Wednesday", startTime: "09:00", endTime: "10:30" },
-      { day: "Friday", startTime: "09:00", endTime: "10:30" },
+    schedule_id: 1,
+    subject_id: 1,
+    subject_name: "Data Structures",
+    subject_code: "CS201",
+    semester: 1,
+    students: [
+      { student_id: 1, first_name: "Alice", last_name: "Johnson" },
+      { student_id: 2, first_name: "Bob", last_name: "Smith" },
+      { student_id: 3, first_name: "Charlie", last_name: "Brown" },
+      { student_id: 4, first_name: "Diana", last_name: "Prince" },
+      { student_id: 5, first_name: "Edward", last_name: "Nigma" },
     ],
-    students: ["1", "2", "3", "4", "5"],
   },
   {
-    id: "2",
-    name: "Algorithms",
-    code: "CS301",
-    teacherId: "1",
-    teacherName: "Dr. Sarah Wilson",
-    schedule: [
-      { day: "Tuesday", startTime: "14:00", endTime: "15:30" },
-      { day: "Thursday", startTime: "14:00", endTime: "15:30" },
+    schedule_id: 2,
+    subject_id: 2,
+    subject_name: "Algorithms",
+    subject_code: "CS301",
+    semester: 2,
+    students: [
+      { student_id: 2, first_name: "Bob", last_name: "Smith" },
+      { student_id: 3, first_name: "Charlie", last_name: "Brown" },
+      { student_id: 6, first_name: "Fiona", last_name: "Gallagher" },
+      { student_id: 7, first_name: "George", last_name: "Costanza" },
+      { student_id: 8, first_name: "Helen", last_name: "Keller" },
     ],
-    students: ["2", "3", "6", "7", "8"],
   },
   {
-    id: "3",
-    name: "Database Systems",
-    code: "CS401",
-    teacherId: "1",
-    teacherName: "Dr. Sarah Wilson",
-    schedule: [
-      { day: "Monday", startTime: "11:00", endTime: "12:30" },
-      { day: "Wednesday", startTime: "11:00", endTime: "12:30" },
+    schedule_id: 3,
+    subject_id: 3,
+    subject_name: "Database Systems",
+    subject_code: "CS401",
+    semester: 3,
+    students: [
+      { student_id: 1, first_name: "Alice", last_name: "Johnson" },
+      { student_id: 4, first_name: "Diana", last_name: "Prince" },
+      { student_id: 5, first_name: "Edward", last_name: "Nigma" },
+      { student_id: 9, first_name: "Ian", last_name: "Malcolm" },
+      { student_id: 10, first_name: "Julia", last_name: "Roberts" },
     ],
-    students: ["1", "4", "5", "9", "10"],
   },
   {
-    id: "4",
-    name: "Calculus I",
-    code: "MATH101",
-    teacherId: "2",
-    teacherName: "Prof. Michael Brown",
-    schedule: [
-      { day: "Tuesday", startTime: "11:00", endTime: "12:30" },
-      { day: "Thursday", startTime: "11:00", endTime: "12:30" },
+    schedule_id: 4,
+    subject_id: 4,
+    subject_name: "Calculus I",
+    subject_code: "MATH101",
+    semester: 1,
+    students: [
+      { student_id: 1, first_name: "Alice", last_name: "Johnson" },
+      { student_id: 2, first_name: "Bob", last_name: "Smith" },
+      { student_id: 11, first_name: "Kevin", last_name: "Malone" },
+      { student_id: 12, first_name: "Linda", last_name: "Belcher" },
+      { student_id: 13, first_name: "Marty", last_name: "McFly" },
     ],
-    students: ["1", "2", "11", "12", "13"],
   },
 ]
 
@@ -78,8 +94,17 @@ export function TeacherPortal({ user }: { user: User | null }) {
   const [activeTab, setActiveTab] = useState<"qr-generator" | "attendance">("qr-generator")
 
   const teacherClassData = mockClasses.filter(cls => 
-    cls.teacherId?.toString() === user?.teacherId?.toString()
+    cls.schedule_id.toString() === user?.teacherId?.toString()
   )
+
+  // Group classes by semester
+  const classesBySemester: Record<number, ClassData[]> = {}
+  mockClasses.forEach(cls => {
+    if (!classesBySemester[cls.semester]) {
+      classesBySemester[cls.semester] = []
+    }
+    classesBySemester[cls.semester].push(cls)
+  })
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -118,7 +143,11 @@ export function TeacherPortal({ user }: { user: User | null }) {
       </div>
 
       {activeTab === "qr-generator" ? (
-        <QRGenerator teacherId={user?.teacherId?.toString() || "1"} />
+        <QRGenerator 
+          teacherId={user?.teacherId?.toString() || "1"} 
+          allClasses={mockClasses}
+          classesBySemester={classesBySemester}
+        />
       ) : (
         <div className="text-center text-muted-foreground px-4">
           <Card className="max-w-2xl mx-auto">
@@ -137,11 +166,11 @@ export function TeacherPortal({ user }: { user: User | null }) {
                   <div className="grid gap-3">
                     {teacherClassData.map((cls) => (
                       <Button 
-                        key={cls.id} 
+                        key={cls.schedule_id} 
                         variant="outline" 
                         className="justify-between"
                       >
-                        <span>{cls.name} ({cls.code})</span>
+                        <span>{cls.subject_name} ({cls.subject_code})</span>
                         <Badge variant="secondary">
                           {cls.students?.length || 0} students
                         </Badge>
@@ -153,7 +182,7 @@ export function TeacherPortal({ user }: { user: User | null }) {
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    You don't have any classes assigned yet.
+                    You don&apos;t have any classes assigned yet.
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Contact your administrator to assign classes.

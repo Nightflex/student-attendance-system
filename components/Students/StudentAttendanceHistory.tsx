@@ -21,6 +21,14 @@ interface AttendanceHistoryProps {
   studentId: string;
 }
 
+interface AxiosError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 export function StudentAttendanceHistory({ studentId }: AttendanceHistoryProps) {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,9 +50,10 @@ export function StudentAttendanceHistory({ studentId }: AttendanceHistoryProps) 
         } else {
           setRecordsError(res.data.message || "Failed to fetch attendance");
         }
-      } catch (err: any) {
+      } catch (err) {
+        const axiosError = err as AxiosError;
         console.error(err);
-        setRecordsError("Error fetching attendance data");
+        setRecordsError(axiosError.response?.data?.message || "Error fetching attendance data");
       } finally {
         setIsLoading(false);
       }

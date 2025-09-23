@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     } else {
       return NextResponse.json(loginResult, { status: 401 });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Login API Error:", error);
     return NextResponse.json(
       { success: false, message: "An error occurred during login. Please try again." },

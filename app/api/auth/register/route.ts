@@ -3,6 +3,10 @@ import { NextResponse } from 'next/server';
 import { registerStudent } from '@/lib/auth/register'; // Import our library function
 import type { CreateStudentRequest } from '@/lib/types'; // Adjust path if needed
 
+interface StudentError extends Error {
+  message: string;
+}
+
 export async function POST(request: Request) {
   try {
     const body: CreateStudentRequest = await request.json();
@@ -98,18 +102,21 @@ export async function POST(request: Request) {
       { status: 201 } // Created
     );
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Student Registration API Error:", error);
+
+    // Type guard for error
+    const err = error as StudentError;
 
     // --- 4. Handle Errors from Library Function ---
     // Specifically handle known errors from registerStudent
-    if (error.message?.includes('already exists')) {
+    if (err.message?.includes('already exists')) {
         return NextResponse.json(
-            { error: error.message }, // Use the specific message from the library
+            { error: err.message }, // Use the specific message from the library
             { status: 409 } // Conflict - Standard for duplicate resources
         );
     }
-    if (error.message?.includes('Failed to create student record')) {
+    if (err.message?.includes('Failed to create student record')) {
          return NextResponse.json(
             { error: 'Registration failed. Please try again later.' },
             { status: 500 } // Internal Server Error
@@ -118,7 +125,7 @@ export async function POST(request: Request) {
 
     // Generic error response for unexpected issues or other DB errors from lib
     return NextResponse.json(
-      { error: error.message || 'Failed to register student due to a server error.' },
+      { error: err.message || 'Failed to register student due to a server error.' },
       { status: 500 } // Internal Server Error
     );
   }
