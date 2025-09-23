@@ -63,7 +63,7 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
   const attendancePollingRef = useRef<NodeJS.Timeout | null>(null)
   
   const sessionDuration = 480 // 8 minutes in seconds
-  const qrLifetime = 3 // 3 seconds per QR code
+  const qrLifetime = 10 // 3 seconds per QR code
 
   const currentClasses = classesBySemester[Number(selectedSemester)] || []
 
