@@ -97,12 +97,6 @@ export function TeacherDashboardClient({ user, allClasses, classesBySemester }: 
     allClassesLength: allClasses?.length, 
     classesBySemesterKeys: Object.keys(classesBySemester || {}) 
   })
-  
-  // Handle QR generation callback
-  const handleQRGenerated = (qrData: QRData) => {
-    console.log("QR Code generated:", qrData)
-    // You can add additional logic here if needed
-  }
 
   // Filter mock classes for ManualAttendance (you can update this to use real data later)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

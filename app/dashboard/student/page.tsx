@@ -44,14 +44,14 @@ export default async function StudentDashboardPage() {
     const verified = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET!));
     payload = verified.payload as JWTPayload;
   } catch (error) {
-    throw new Error("Invalid token — should have been caught by middleware");
+    throw new Error("Invalid token — should have been caught by middleware:"+ error);
   }
 
   if (payload.role !== "student") {
     throw new Error("Unauthorized access — should have been caught by middleware");
   }
 
-  const studentRows = await executeQuery`
+  const studentRowsResult = await executeQuery`
     SELECT 
       student_id AS id,
       first_name,
@@ -64,7 +64,8 @@ export default async function StudentDashboardPage() {
       phone_number
     FROM students
     WHERE student_id = ${Number(payload.id)} AND is_active = true
-  ` as StudentRow[];
+  `;
+  const studentRows = studentRowsResult as unknown as StudentRow[];
 
   if (studentRows.length === 0) {
     throw new Error("Student not found — middleware should block this case");
@@ -72,11 +73,12 @@ export default async function StudentDashboardPage() {
 
   const student = studentRows[0];
 
-  const courseRows = await executeQuery`
+  const courseRowsResult = await executeQuery`
     SELECT course_name, course_code
     FROM courses
     WHERE course_id = ${student.course_id}
-  ` as CourseRow[];
+  `;
+  const courseRows = courseRowsResult as unknown as CourseRow[];
 
   const course = courseRows[0] || { course_name: "Unknown", course_code: "" };
 

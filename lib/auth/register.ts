@@ -1,4 +1,3 @@
-// lib/auth/register.ts
 import bcrypt from 'bcryptjs';
 import { executeQuery } from '@/lib/db';
 import type { CreateStudentRequest, Student } from '@/lib/types'; // Adjust path if needed
@@ -51,18 +50,20 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
     const phoneNumber = studentData.phone_number?.trim() || null; // Handle optional phone
 
     // 3. Check for existing email (prevent duplicates)
-    const [existingEmail] = await executeQuery`
+    const existingEmailResult = await executeQuery`
       SELECT student_id FROM students WHERE email = ${email}
-    ` as { student_id: number }[];
+    `;
+    const [existingEmail] = existingEmailResult as unknown as { student_id: number }[];
     if (existingEmail) {
       throw new Error("A student with this email already exists.");
     }
 
     // 4. Check for existing roll number (prevent duplicates)
     // This is crucial since roll_number is supposed to be unique.
-    const [existingRoll] = await executeQuery`
+    const existingRollResult = await executeQuery`
       SELECT student_id FROM students WHERE roll_number = ${rollNumber}
-    ` as { student_id: number }[];
+    `;
+    const [existingRoll] = existingRollResult as unknown as { student_id: number }[];
     if (existingRoll) {
         throw new Error("A student with this roll number already exists.");
     }
@@ -73,7 +74,7 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
     // 6. Insert the new student into the database
     // IMPORTANT: We use the roll_number provided by the user (rollNumber variable)
     // and do NOT generate a new one here.
-    const [newStudent] = await executeQuery`
+    const newStudentResult = await executeQuery`
       INSERT INTO students (
         first_name, last_name, roll_number, email, phone_number,
         course_id, semester, batch_year, password_hash
@@ -97,7 +98,8 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
         is_active,
         created_at,
         updated_at
-    ` as NewStudent[];
+    `;
+    const [newStudent] = newStudentResult as unknown as NewStudent[];
 
     if (!newStudent) {
         // This indicates a problem with the INSERT, though it shouldn't happen if the query is valid.
@@ -106,11 +108,12 @@ export async function registerStudent(studentData: CreateStudentRequest): Promis
 
     // 7. Fetch course details to enrich the response object
     // This assumes you have a `courses` table linked by `course_id`.
-    const [courseDetails] = await executeQuery`
+    const courseDetailsResult = await executeQuery`
       SELECT course_name, course_code
       FROM courses
       WHERE course_id = ${newStudent.course_id}
-    ` as CourseDetails[];
+    `;
+    const [courseDetails] = courseDetailsResult as unknown as CourseDetails[];
 
     // 8. Construct and return the Student object
     // This object should match your `Student` type definition (excluding password_hash).

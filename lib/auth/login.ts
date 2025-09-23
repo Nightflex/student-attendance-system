@@ -1,4 +1,3 @@
-// lib/auth/login.ts
 import bcrypt from "bcryptjs";
 import { SignJWT } from "jose";
 import { executeQuery } from "@/lib/db";
@@ -43,33 +42,36 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
 
     switch (loginData.user_type) {
       case "student":
-        result = await executeQuery`
+        const studentResult = await executeQuery`
           SELECT 
             student_id AS id, first_name, last_name, email, password_hash,
             roll_number, course_id, semester, batch_year, phone_number
           FROM students
           WHERE email = ${email} AND is_active = true
-        ` as UserRecord[];
+        `;
+        result = studentResult as unknown as UserRecord[];
         break;
 
       case "teacher":
-        result = await executeQuery`
+        const teacherResult = await executeQuery`
           SELECT 
             teacher_id AS id, first_name, last_name, email, password_hash,
             department_id, designation, phone_number
           FROM teachers
           WHERE email = ${email} AND is_active = true
-        ` as UserRecord[];
+        `;
+        result = teacherResult as unknown as UserRecord[];
         break;
 
       case "admin":
-        result = await executeQuery`
+        const adminResult = await executeQuery`
           SELECT 
             teacher_id AS id, first_name, last_name, email, password_hash,
             department_id, designation, phone_number
           FROM teachers
           WHERE email = ${email} AND is_active = true AND LOWER(designation) LIKE '%admin%'
-        ` as UserRecord[];
+        `;
+        result = adminResult as unknown as UserRecord[];
         break;
 
       default:
@@ -86,9 +88,10 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
     let additionalData: Record<string, string | number | null> = {};
 
     if (loginData.user_type === "student" && userRecord.course_id) {
-      const [course] = await executeQuery`
+      const courseResult = await executeQuery`
         SELECT course_name, course_code FROM courses WHERE course_id = ${userRecord.course_id}
-      ` as Course[];
+      `;
+      const [course] = courseResult as unknown as Course[];
       additionalData = {
         course: course?.course_name || "Unknown",
         course_code: course?.course_code || "",
@@ -99,9 +102,10 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
         phone_number: userRecord.phone_number ?? null,
       };
     } else if (loginData.user_type === "teacher" || loginData.user_type === "admin") {
-      const [dept] = await executeQuery`
+      const deptResult = await executeQuery`
         SELECT department_name FROM departments WHERE department_id = ${userRecord.department_id}
-      ` as Department[];
+      `;
+      const [dept] = deptResult as unknown as Department[];
       additionalData = {
         department: dept?.department_name || "Unknown",
         designation: userRecord.designation ?? null,

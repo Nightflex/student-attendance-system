@@ -8,8 +8,8 @@ interface Student {
   last_name: string;
 }
 
-interface AttendanceRecord {
-  student_id: string;
+interface DatabaseAttendanceRecord {
+  student_id: number;
   first_name: string;
   last_name: string;
   status: string;
@@ -38,7 +38,7 @@ export async function GET(
 
     // Fetch current attendance from database for this session
     const currentDate = sessionData.date
-    const attendanceRecords = await executeQuery`
+    const attendanceRecordsResult = await executeQuery`
       SELECT 
         a.student_id,
         s.first_name,
@@ -52,20 +52,27 @@ export async function GET(
       AND a.attendance_date = ${currentDate}
     `
 
+    // Type the database results properly
+    const attendanceRecords = attendanceRecordsResult as unknown as DatabaseAttendanceRecord[]
+
     // Create a map of attendance records
-    const attendanceMap = new Map<string, AttendanceRecord>()
-    attendanceRecords.forEach((record: AttendanceRecord) => {
-      attendanceMap.set(record.student_id, record)
+    const attendanceMap = new Map<string, DatabaseAttendanceRecord>()
+    attendanceRecords.forEach((record) => {
+      attendanceMap.set(record.student_id.toString(), record)
     })
 
     // Update attendance list with current status
     const updatedAttendanceList = sessionData.students.map((student: Student) => {
       const attendanceRecord = attendanceMap.get(student.student_id.toString())
+      const status: "present" | "absent" =
+        attendanceRecord && (attendanceRecord.status === "present" || attendanceRecord.status === "absent")
+          ? (attendanceRecord.status as "present" | "absent")
+          : "absent"
       return {
         student_id: student.student_id,
         first_name: student.first_name,
         last_name: student.last_name,
-        status: attendanceRecord ? attendanceRecord.status : 'absent',
+        status,
         marked_at: attendanceRecord ? attendanceRecord.attendance_date : null
       }
     })

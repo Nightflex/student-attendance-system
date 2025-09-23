@@ -1,7 +1,6 @@
-// app/api/auth/register/route.ts
 import { NextResponse } from 'next/server';
-import { registerStudent } from '@/lib/auth/register'; // Import our library function
-import type { CreateStudentRequest } from '@/lib/types'; // Adjust path if needed
+import { registerStudent } from '@/lib/auth/register';
+import type { CreateStudentRequest } from '@/lib/types';
 
 interface StudentError extends Error {
   message: string;
@@ -39,7 +38,8 @@ export async function POST(request: Request) {
                 );
             }
              // Update the body with the parsed number to ensure consistency for the lib function.
-             (body as any)[field] = numValue;
+             // Create a new object with the updated field to avoid type issues
+             Object.assign(body, { [field]: numValue });
         }
     }
 
@@ -71,18 +71,17 @@ export async function POST(request: Request) {
     const sanitizedData: CreateStudentRequest = {
         first_name: body.first_name.trim(),
         last_name: body.last_name.trim(),
-        roll_number: body.roll_number.trim(), // Crucial: Use the provided roll number
-        email: email, // Already lowercased and trimmed
-        phone_number: body.phone_number?.trim() || "", // Ensure string or empty
-        password: body.password, // Keep original for hashing
-        confirm_password: body.confirm_password, // Keep for comparison (though lib doesn't use it)
+        roll_number: body.roll_number.trim(),
+        email: email,
+        phone_number: body.phone_number?.trim() || "",
+        password: body.password,
+        confirm_password: body.confirm_password,
         course_id: Number(body.course_id),
         semester: Number(body.semester),
         batch_year: Number(body.batch_year),
     };
 
     // --- 2. Call Library Function ---
-    // Delegate the core logic (hashing, DB insert) to our library function.
     const newStudent = await registerStudent(sanitizedData);
 
     // --- 3. Return Success Response ---
@@ -90,43 +89,38 @@ export async function POST(request: Request) {
       {
         success: true,
         student: {
-            // Return a minimal safe student object if needed, or the full one from lib
             id: newStudent.student_id,
             name: newStudent.name,
             email: newStudent.email,
             roll_number: newStudent.roll_number,
-            // Add other non-sensitive fields as needed by the frontend
         },
         message: 'Student registered successfully!',
       },
-      { status: 201 } // Created
+      { status: 201 }
     );
 
-  } catch (error: unknown) {
-    console.error("Student Registration API Error:", error);
-
-    // Type guard for error
+  } catch (error) {
     const err = error as StudentError;
+    console.error("Student Registration API Error:", err);
 
     // --- 4. Handle Errors from Library Function ---
-    // Specifically handle known errors from registerStudent
     if (err.message?.includes('already exists')) {
         return NextResponse.json(
-            { error: err.message }, // Use the specific message from the library
-            { status: 409 } // Conflict - Standard for duplicate resources
+            { error: err.message },
+            { status: 409 }
         );
     }
     if (err.message?.includes('Failed to create student record')) {
          return NextResponse.json(
             { error: 'Registration failed. Please try again later.' },
-            { status: 500 } // Internal Server Error
+            { status: 500 }
         );
     }
 
     // Generic error response for unexpected issues or other DB errors from lib
     return NextResponse.json(
       { error: err.message || 'Failed to register student due to a server error.' },
-      { status: 500 } // Internal Server Error
+      { status: 500 }
     );
   }
 }

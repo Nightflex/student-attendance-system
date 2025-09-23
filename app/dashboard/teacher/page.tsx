@@ -49,7 +49,7 @@ export default async function TeacherDashboardPage() {
     const { payload: verifiedPayload } = await jwtVerify(token.value, secret);
     payload = verifiedPayload as JWTPayload;
   } catch (error) {
-    throw new Error("Invalid token — should have been caught by middleware");
+    throw new Error("Invalid token — should have been caught by middleware:"+error);
   }
   
   // Ensure user is a teacher or admin
@@ -58,7 +58,7 @@ export default async function TeacherDashboardPage() {
   }
   
   // Fetch teacher data
-  const teacherRows = await executeQuery`
+  const teacherRowsResult = await executeQuery`
     SELECT
       teacher_id AS id,
       first_name,
@@ -69,7 +69,8 @@ export default async function TeacherDashboardPage() {
       phone_number
     FROM teachers
     WHERE teacher_id = ${Number(payload.id)} AND is_active = true
-  ` as TeacherRow[];
+  `;
+  const teacherRows = teacherRowsResult as unknown as TeacherRow[];
   
   if (teacherRows.length === 0) {
     throw new Error("Teacher not found — middleware should block this case");
@@ -77,16 +78,17 @@ export default async function TeacherDashboardPage() {
   
   const teacher = teacherRows[0];
   
-  const deptRows = await executeQuery`
+  const deptRowsResult = await executeQuery`
     SELECT department_name
     FROM departments
     WHERE department_id = ${teacher.department_id}
-  ` as DepartmentRow[];
+  `;
+  const deptRows = deptRowsResult as unknown as DepartmentRow[];
   
   const department = deptRows[0] || { department_name: "Unknown Department" };
   
   // Fetch all classes for this teacher (all semesters)
-  const allClasses = await executeQuery`
+  const allClassesResult = await executeQuery`
     SELECT 
       tsa.assignment_id as schedule_id,
       s.subject_id, 
@@ -113,7 +115,8 @@ export default async function TeacherDashboardPage() {
     WHERE tsa.teacher_id = ${teacher.id}
     GROUP BY tsa.assignment_id, s.subject_id, s.subject_name, s.subject_code, tsa.semester
     ORDER BY tsa.semester, s.subject_name
-  ` as ClassData[];
+  `;
+  const allClasses = allClassesResult as unknown as ClassData[];
   
   // Group classes by semester for easier filtering
   const classesBySemester: Record<number, ClassData[]> = {};

@@ -65,24 +65,6 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
   const sessionDuration = 480 // 8 minutes in seconds
   const qrLifetime = 3 // 3 seconds per QR code
 
-  if (!teacherId) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <QrCode className="h-5 w-5" />
-            Secure QR Generator
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertDescription>Teacher ID not available. Cannot generate QR codes.</AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    )
-  }
-
   const currentClasses = classesBySemester[Number(selectedSemester)] || []
 
   useEffect(() => {
@@ -103,7 +85,7 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [isSessionActive, timeRemaining])
+  }, [isSessionActive, timeRemaining, stopAttendanceSession])
 
   const pollAttendanceUpdates = async (currentSessionId: string) => {
     try {
@@ -246,7 +228,7 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
     }, 2000)
   }
 
-  const stopAttendanceSession = async () => {
+  function stopAttendanceSession() {
     setIsSessionActive(false)
     setQrDataURL("")
     setCurrentQRNumber(0)
@@ -265,11 +247,13 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
     // Finalize session on server
     if (sessionId) {
       try {
-        await fetch(`/api/attendance/finalize-session/${sessionId}`, {
+        fetch(`/api/attendance/finalize-session/${sessionId}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${teacherId}`
           }
+        }).catch(error => {
+          console.error('Error finalizing session:', error)
         })
       } catch (error) {
         console.error('Error finalizing session:', error)
@@ -301,6 +285,24 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
   const selectedClassData = currentClasses.find(c => c.schedule_id.toString() === selectedClass)
   const presentCount = attendanceList.filter(a => a.status === 'present').length
   const totalStudents = selectedClassData?.students.length || 0
+
+  if (!teacherId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Secure QR Generator
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertDescription>Teacher ID not available. Cannot generate QR codes.</AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

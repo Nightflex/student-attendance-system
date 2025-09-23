@@ -3,21 +3,7 @@ import { storeSession, SessionData } from "@/lib/attendance-store"
 
 export async function POST(req: NextRequest) {
   try {
-    interface Student {
-      student_id: number;
-      first_name: string;
-      last_name: string;
-    }
-    const body = await req.json();
-    const { sessionId, teacherId, subjectId, semester, assignmentId, students, date }: {
-      sessionId: string;
-      teacherId: string | number;
-      subjectId: number;
-      semester: number;
-      assignmentId: number;
-      students: Student[];
-      date: string;
-    } = body;
+    const { sessionId, teacherId, subjectId, semester, assignmentId, students, date } = await req.json()
 
     // Verify teacher authorization
     const authHeader = req.headers.get('authorization')
@@ -31,20 +17,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Initialize attendance list with all students as absent
-    const attendanceList = students.map((student: Student) => ({
+    const attendanceList = students.map((student: { student_id: number; first_name: string; last_name: string }) => ({
       student_id: student.student_id,
       first_name: student.first_name,
       last_name: student.last_name,
-      status: 'absent' as 'absent',
-      marked_at: null as string | null
+      status: 'absent' as const,
+      marked_at: null
     }))
 
     // Store session data
     const sessionData: SessionData = {
       teacherId: teacherId.toString(),
       subjectId,
-      semester,
-      assignmentId,
+      semester: semester ?? 0,
+      assignmentId: assignmentId ?? 0,
       students,
       date,
       startTime: new Date().toISOString(),

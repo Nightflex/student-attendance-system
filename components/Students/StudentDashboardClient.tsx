@@ -36,7 +36,6 @@ interface TimetableClass {
 export function StudentDashboardClient({ user }: { user: User }) {
   const [activeTab, setActiveTab] = useState<"scanner" | "history">("scanner")
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
-  const [isLoadingAttendance] = useState(false) // Marked as unused but kept for future use
   const [enrolledClasses, setEnrolledClasses] = useState<StudentClass[]>([]);
 
   useEffect(() => {
