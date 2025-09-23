@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { AuthLayout } from "@/components/Auth/AuthLayout"
 import { LoginForm } from "@/components/Auth/LoginForm"
 import { RegisterForm } from "@/components/Auth/RegisterForm"
+import { User } from "@/lib/types"
 
 interface UserData {
   id: string;
@@ -20,7 +21,7 @@ export function AuthClient() {
   const [isLogin, setIsLogin] = useState(true)
   const redirectUrl = searchParams.get('redirect') || '/dashboard/student'
 
-  const handleLogin = (userData: UserData) => {
+  const handleLogin = (userData: User) => {
     // In a real app, you would:
     // 1. Make API call to authenticate
     // 2. Store token in cookies/session
