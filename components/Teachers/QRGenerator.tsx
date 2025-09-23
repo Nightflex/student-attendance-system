@@ -1,6 +1,6 @@
 // components/teachers/qr-generator.tsx
 "use client"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Image from "next/image"
 import QRCodeLib from "qrcode"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -70,6 +70,42 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
   useEffect(() => {
     setSelectedClass("")
   }, [selectedSemester])
+
+  const stopAttendanceSession = useCallback(() => {
+    setIsSessionActive(false)
+    setQrDataURL("")
+    setCurrentQRNumber(0)
+    setIsGeneratingQR(false)
+    
+    if (regenerationIntervalRef.current) {
+      clearInterval(regenerationIntervalRef.current)
+      regenerationIntervalRef.current = null
+    }
+    
+    if (attendancePollingRef.current) {
+      clearInterval(attendancePollingRef.current)
+      attendancePollingRef.current = null
+    }
+
+    // Finalize session on server
+    if (sessionId) {
+      try {
+        fetch(`/api/attendance/finalize-session/${sessionId}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${teacherId}`
+          }
+        }).catch(error => {
+          console.error('Error finalizing session:', error)
+        })
+      } catch (error) {
+        console.error('Error finalizing session:', error)
+      }
+    }
+
+    setSessionId("")
+    setAttendanceList([])
+  }, [sessionId, teacherId])
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -226,42 +262,6 @@ export function QRGenerator({ teacherId, allClasses, classesBySemester, onQRGene
     attendancePollingRef.current = setInterval(() => {
       pollAttendanceUpdates(newSessionId)
     }, 2000)
-  }
-
-  function stopAttendanceSession() {
-    setIsSessionActive(false)
-    setQrDataURL("")
-    setCurrentQRNumber(0)
-    setIsGeneratingQR(false)
-    
-    if (regenerationIntervalRef.current) {
-      clearInterval(regenerationIntervalRef.current)
-      regenerationIntervalRef.current = null
-    }
-    
-    if (attendancePollingRef.current) {
-      clearInterval(attendancePollingRef.current)
-      attendancePollingRef.current = null
-    }
-
-    // Finalize session on server
-    if (sessionId) {
-      try {
-        fetch(`/api/attendance/finalize-session/${sessionId}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${teacherId}`
-          }
-        }).catch(error => {
-          console.error('Error finalizing session:', error)
-        })
-      } catch (error) {
-        console.error('Error finalizing session:', error)
-      }
-    }
-
-    setSessionId("")
-    setAttendanceList([])
   }
 
   useEffect(() => {

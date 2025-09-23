@@ -5,46 +5,6 @@ import { TeacherNavigationTabs } from "@/components/Teachers/TeacherNavigationTa
 import { ManualAttendance } from "@/components/Teachers/ManualAttendance"
 import { QRGenerator } from "@/components/Teachers/QRGenerator"
 
-// Mock data for ManualAttendance (you can keep this for now)
-const mockClasses = [
-  {
-    id: "1",
-    name: "Data Structures",
-    code: "CS201",
-    teacherId: "1",
-    teacherName: "Dr. Sarah Wilson",
-    schedule: [
-      { day: "Monday", startTime: "09:00", endTime: "10:30" },
-      { day: "Wednesday", startTime: "09:00", endTime: "10:30" },
-      { day: "Friday", startTime: "09:00", endTime: "10:30" },
-    ],
-    students: ["1", "2", "3", "4", "5"],
-  },
-  {
-    id: "2",
-    name: "Algorithms",
-    code: "CS301",
-    teacherId: "1",
-    teacherName: "Dr. Sarah Wilson",
-    schedule: [
-      { day: "Tuesday", startTime: "14:00", endTime: "15:30" },
-      { day: "Thursday", startTime: "14:00", endTime: "15:30" },
-    ],
-    students: ["2", "3", "6", "7", "8"],
-  },
-  {
-    id: "3",
-    name: "Database Systems",
-    code: "CS401",
-    teacherId: "1",
-    teacherName: "Dr. Sarah Wilson",
-    schedule: [
-      { day: "Monday", startTime: "11:00", endTime: "12:30" },
-      { day: "Wednesday", startTime: "11:00", endTime: "12:30" },
-    ],
-    students: ["1", "4", "5", "9", "10"],
-  },
-]
 
 interface ClassData {
   schedule_id: number // This is now assignment_id from teacher_subject_assignments
@@ -74,20 +34,6 @@ interface TeacherDashboardClientProps {
   classesBySemester: Record<number, ClassData[]>
 }
 
-interface QRData {
-  sessionId: string
-  qrToken: string
-  assignmentId: number
-  subjectId: number
-  teacherId: string
-  semester: number
-  qrNumber: number
-  generatedAt: string
-  expiresAt: string
-  type: string
-  scanUrl: string
-}
-
 export function TeacherDashboardClient({ user, allClasses, classesBySemester }: TeacherDashboardClientProps) {
   const [activeTab, setActiveTab] = useState<"qr-generator" | "attendance">("qr-generator")
   
@@ -97,12 +43,6 @@ export function TeacherDashboardClient({ user, allClasses, classesBySemester }: 
     allClassesLength: allClasses?.length, 
     classesBySemesterKeys: Object.keys(classesBySemester || {}) 
   })
-
-  // Filter mock classes for ManualAttendance (you can update this to use real data later)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const teacherClassData = mockClasses.filter(cls =>
-    cls.teacherId?.toString() === user?.teacherId?.toString()
-  )
 
   // Handle case where teacherId is undefined
   if (!user.teacherId) {

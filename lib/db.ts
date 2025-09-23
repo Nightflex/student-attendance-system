@@ -26,7 +26,7 @@ export function handleDatabaseError(error: unknown, operation: string): never {
 }
 
 interface QueryResult {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export async function executeQuery(strings: TemplateStringsArray, ...values: unknown[]): Promise<QueryResult[]> {
