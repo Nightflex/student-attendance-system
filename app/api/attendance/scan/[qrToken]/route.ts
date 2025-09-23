@@ -17,12 +17,22 @@ export async function POST(
     const { qrToken } = await params
     const { student_id } = await req.json()
 
+
     if (!student_id) {
       return NextResponse.json({ error: 'Student ID required' }, { status: 400 })
     }
 
     // Get QR token data
     const qrData = await getQRToken(qrToken)
+
+    console.log("Received student_id:", student_id, "Type:", typeof student_id)
+  
+    console.log("QR Data students:", qrData?.students)
+    console.log("Student enrolled check:", qrData?.students?.some((s: any) => {
+      console.log("Comparing:", s.student_id, typeof s.student_id, "with", student_id, typeof student_id)
+      console.log("Equal?", s.student_id === student_id)
+      return s.student_id === student_id
+    }))
     
     if (!qrData) {
       return NextResponse.json({ error: 'Invalid or expired QR code' }, { status: 400 })
@@ -38,6 +48,7 @@ export async function POST(
 
     // Verify student is enrolled in this class
     const studentEnrolled = qrData.students?.some((s) => s.student_id === student_id)
+    console.log("Scan:"+studentEnrolled+":Student_ID:"+student_id)
     if (!studentEnrolled) {
       return NextResponse.json({ error: 'Student not enrolled in this class' }, { status: 403 })
     }

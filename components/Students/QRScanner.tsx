@@ -68,6 +68,8 @@ export function QRScanner({ studentId, onScanSuccess, onScanError }: QRScannerPr
         throw new Error("QR code has expired. Please scan the new QR code.")
       }
 
+      console.log("Sending student ID:", studentId, "Type:", typeof studentId)
+
       const response = await fetch(`/api/attendance/scan/${attendanceData.qrToken}`, {
         method: 'POST',
         headers: {
