@@ -1,3 +1,4 @@
+// pages/api/attendance/scan/[qrToken]/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { getQRToken, deleteQRToken } from "@/lib/attendance-store"
 import { executeQuery } from "@/lib/db"
@@ -17,14 +18,12 @@ export async function POST(
     const { qrToken } = await params
     const { student_id } = await req.json()
 
-
     if (!student_id) {
       return NextResponse.json({ error: 'Student ID required' }, { status: 400 })
     }
 
     // Get QR token data
     const qrData = await getQRToken(qrToken)
-
     
     if (!qrData) {
       return NextResponse.json({ error: 'Invalid or expired QR code' }, { status: 400 })
@@ -65,7 +64,7 @@ export async function POST(
 
     const student = studentResult[0]
 
-    // Record attendance
+    // Record attendance - FIXED POSTGRESQL SYNTAX
     const currentYear = new Date().getFullYear()
     const batchYear = currentYear - Math.floor((qrData.semester - 1) / 2)
     const currentDate = new Date().toISOString().split('T')[0]
@@ -89,9 +88,10 @@ export async function POST(
         ${currentDate},
         'present'
       )
-      ON DUPLICATE KEY UPDATE 
-        status = VALUES(status),
-        attendance_date = VALUES(attendance_date)
+      ON CONFLICT (teacher_id, subject_id, student_id, attendance_date)
+      DO UPDATE SET 
+        status = EXCLUDED.status,
+        attendance_date = EXCLUDED.attendance_date
     `
 
     // Delete QR token after successful use
