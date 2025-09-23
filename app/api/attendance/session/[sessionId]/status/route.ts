@@ -18,10 +18,11 @@ interface DatabaseAttendanceRecord {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const { sessionId } = params
+    // Await the params since it's a Promise in the App Router
+    const { sessionId } = await params
     
     // Get session data from Redis
     const sessionData = await getSession(sessionId)
