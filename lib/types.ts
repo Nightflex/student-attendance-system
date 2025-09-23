@@ -152,7 +152,7 @@ export interface CreateTeacherRequest {
 }
 
 export interface LoginRequest {
-  email: string;
+  roll_number: string;
   password: string; // Plaintext
   user_type: "student" | "teacher" | "admin";
 }

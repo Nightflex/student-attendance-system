@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff, Mail, User } from "lucide-react"
+import { Eye, EyeOff, User } from "lucide-react" // Removed Mail icon
 import axios from "axios"
 import type { LoginRequest, LoginResponse, User as UserType } from "@/lib/types"
 import { useRouter } from "next/navigation"
@@ -31,7 +31,7 @@ export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
   const [error, setError] = useState("")
 
   const [formData, setFormData] = useState<LoginRequest>({
-    email: "",
+    roll_number: "", // Changed from email to roll_number
     password: "",
     user_type: "student",
   })
@@ -41,10 +41,9 @@ export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
     setIsLoading(true)
     setError("")
 
-    // Simple email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
-      setError("Please enter a valid email address")
+    // Simple roll number validation (adjust as needed)
+    if (!formData.roll_number || formData.roll_number.trim().length < 1) {
+      setError("Please enter your roll number")
       setIsLoading(false)
       return
     }
@@ -55,32 +54,26 @@ export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
         timeout: 10000,
       })
 
-      if (response.data.success && response.data.token) {
-        // The token is now set in cookies by the API, so we don't need to store it in localStorage
-        // Just pass the user data to the parent component
-        if (response.data.user) {
-          onLogin(response.data.user)
-          
-          // Redirect based on user role
-          if (response.data.user.role) {
-            switch (response.data.user.role) {
-              case 'student':
-                router.push('/dashboard/student')
-                break
-              case 'teacher':
-                router.push('/dashboard/teacher')
-                break
-              case 'admin':
-                router.push('/dashboard/admin')
-                break
-              default:
-                router.push('/dashboard')
-            }
-          } else {
-            router.push('/dashboard')
+      if (response.data.success && response.data.user) {
+        onLogin(response.data.user)
+        
+        // Redirect based on user role
+        if (response.data.user.role) {
+          switch (response.data.user.role) {
+            case 'student':
+              router.push('/dashboard/student')
+              break
+            case 'teacher':
+              router.push('/dashboard/teacher')
+              break
+            case 'admin':
+              router.push('/dashboard/admin')
+              break
+            default:
+              router.push('/dashboard')
           }
         } else {
-          setError("User data missing in response.")
+          router.push('/dashboard')
         }
       } else {
         setError(response.data.message || "Login failed")
@@ -130,22 +123,24 @@ export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
             </div>
           </div>
 
+          {/* Roll Number Input */}
           <div className="space-y-2">
-            <Label htmlFor="email_login">Email Address *</Label>
+            <Label htmlFor="roll_number_login">Roll Number *</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                id="email_login"
-                type="email"
-                placeholder="Enter your email address"
+                id="roll_number_login"
+                type="text"
+                placeholder="Enter your roll number"
                 className="pl-10"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
+                value={formData.roll_number}
+                onChange={(e) => handleInputChange("roll_number", e.target.value)}
                 required
               />
             </div>
           </div>
 
+          {/* Password Input */}
           <div className="space-y-2">
             <Label htmlFor="password_login">Password *</Label>
             <div className="relative">
@@ -200,20 +195,7 @@ export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">Don&apos;t have an account?</p>
-          <Button
-            variant="link"
-            className="p-0 h-auto font-semibold"
-            onClick={onSwitchToRegister}
-          >
-            Register as Student
-          </Button>
-        </div>
-
-        <div className="mt-6 text-center">
-          <p className="text-xs text-muted-foreground">
-            Teachers and Administrators: Contact your system admin for access
-          </p>
+          <p className="text-sm text-muted-foreground">Contact admin for account access</p>
         </div>
       </CardContent>
     </Card>

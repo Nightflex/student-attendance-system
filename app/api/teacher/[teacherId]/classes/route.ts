@@ -7,15 +7,6 @@ interface StudentEnrollment {
   last_name: string;
 }
 
-interface ClassData {
-  schedule_id: number;
-  subject_id: number;
-  subject_name: string;
-  subject_code: string;
-  semester: number;
-  students: { student_id: number; first_name: string; last_name: string }[];
-}
-
 export async function GET(
   req: NextRequest, 
   { params }: { params: Promise<{ teacherId: string }> }

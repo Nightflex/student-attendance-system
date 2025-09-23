@@ -12,15 +12,16 @@ export async function POST(request: Request) {
   try {
     const body: LoginRequest = await request.json();
 
-    if (!body.email || !body.password || !body.user_type) {
+    // Now require roll_number instead of email
+    if (!body.roll_number || !body.password || !body.user_type) {
       return NextResponse.json(
-        { success: false, message: "Email, password, and user type are required." },
+        { success: false, message: "Roll number, password, and user type are required." },
         { status: 400 }
       );
     }
 
     const sanitizedData: LoginRequest = {
-      email: body.email.toLowerCase().trim(),
+      roll_number: body.roll_number.trim(), // Use roll_number instead of email
       password: body.password,
       user_type: body.user_type,
     };
@@ -34,7 +35,8 @@ export async function POST(request: Request) {
       const token = await new SignJWT({ 
         id: loginResult.user.id, 
         role: loginResult.user.role,
-        email: loginResult.user.email
+        // Include roll_number in JWT payload
+        roll_number: loginResult.user.roll_number || loginResult.user.email // Fallback to email if needed
       })
         .setProtectedHeader({ alg: "HS256", typ: "JWT" })
         .setIssuedAt()
@@ -49,14 +51,13 @@ export async function POST(request: Request) {
         message: "Login successful!",
       });
 
-      // Set cookie with Vercel-compatible settings (REMOVE domain setting)
+      // Set cookie with Vercel-compatible settings
       response.cookies.set("auth-token", token, {
         httpOnly: true,
-        secure: true, // Always true for Vercel
+        secure: true,
         maxAge: 60 * 60 * 24, // 24 hours
         path: "/",
         sameSite: "lax",
-        // Remove the domain setting - let browser handle it automatically
       });
 
       return response;

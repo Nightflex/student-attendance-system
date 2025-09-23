@@ -97,9 +97,6 @@ export async function GET(
     // CRITICAL: Update session data in memory with the latest attendance data
     await updateSessionAttendance(sessionId, updatedAttendanceList)
 
-    // Get the updated session data to return
-    const updatedSession = await getSession(sessionId)
-
     return NextResponse.json({ 
       success: true,
       attendanceList: updatedAttendanceList,

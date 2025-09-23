@@ -1,7 +1,7 @@
-import bcrypt from "bcryptjs";
-import { SignJWT } from "jose";
+// lib/auth/login.ts
 import { executeQuery } from "@/lib/db";
 import type { LoginRequest, LoginResponse, User } from "@/lib/types";
+import bcrypt from "bcryptjs";
 
 interface DatabaseError extends Error {
   message: string;
@@ -37,7 +37,13 @@ if (!process.env.JWT_SECRET) {
 
 export async function authenticateUser(loginData: LoginRequest): Promise<LoginResponse> {
   try {
-    const email = loginData.email.toLowerCase().trim();
+    // Use roll_number instead of email
+    const rollNumber = loginData.roll_number?.trim();
+    
+    if (!rollNumber) {
+      return { success: false, message: "Roll number is required." };
+    }
+
     let result: UserRecord[] = [];
 
     switch (loginData.user_type) {
@@ -47,7 +53,7 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
             student_id AS id, first_name, last_name, email, password_hash,
             roll_number, course_id, semester, batch_year, phone_number
           FROM students
-          WHERE email = ${email} AND is_active = true
+          WHERE roll_number = ${rollNumber} AND is_active = true
         `;
         result = studentResult as unknown as UserRecord[];
         break;
@@ -58,7 +64,9 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
             teacher_id AS id, first_name, last_name, email, password_hash,
             department_id, designation, phone_number
           FROM teachers
-          WHERE email = ${email} AND is_active = true
+          WHERE email = ${rollNumber} AND is_active = true
+          // For teachers, you might want to keep email as identifier
+          // Or create a teacher_id field if needed
         `;
         result = teacherResult as unknown as UserRecord[];
         break;
@@ -69,7 +77,8 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
             teacher_id AS id, first_name, last_name, email, password_hash,
             department_id, designation, phone_number
           FROM teachers
-          WHERE email = ${email} AND is_active = true AND LOWER(designation) LIKE '%admin%'
+          WHERE email = ${rollNumber} AND is_active = true AND LOWER(designation) LIKE '%admin%'
+          // For admins, keep email as identifier
         `;
         result = adminResult as unknown as UserRecord[];
         break;
@@ -79,10 +88,10 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
     }
 
     const userRecord = result[0];
-    if (!userRecord) return { success: false, message: "Invalid email or password." };
+    if (!userRecord) return { success: false, message: "Invalid roll number or password." };
 
     const isValidPassword = await bcrypt.compare(loginData.password, userRecord.password_hash);
-    if (!isValidPassword) return { success: false, message: "Invalid email or password." };
+    if (!isValidPassword) return { success: false, message: "Invalid roll number or password." };
 
     // Build user object
     let additionalData: Record<string, string | number | null> = {};
@@ -122,15 +131,7 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
       ...additionalData,
     };
 
-    // Create JWT with jose
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-    const token = await new SignJWT({ id: user.id, email: user.email, role: user.role })
-      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-      .setIssuedAt()
-      .setExpirationTime("1d")
-      .sign(secret);
-
-    return { success: true, user, token, message: "Login successful!" };
+    return { success: true, user, message: "Login successful!" };
   } catch (error) {
     const dbError = error as DatabaseError;
     console.error("Authentication Error:", dbError);
