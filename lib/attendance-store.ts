@@ -1,5 +1,6 @@
+// lib/attendance-store.ts
 export interface QRTokenData {
-  qrToken: string  // Added this missing property
+  qrToken: string
   sessionId: string
   teacherId: string
   subjectId: number
@@ -67,45 +68,63 @@ export function cleanupExpiredTokens() {
 
 // QR Token operations
 export function storeQRToken(token: string, data: QRTokenData): void {
+  console.log("Storing QR token:", token, data);
   activeQRTokens.set(token, data)
   cleanupExpiredTokens()
 }
 
 export function getQRToken(token: string): QRTokenData | null {
   const data = activeQRTokens.get(token)
-  if (!data) return null
+  if (!data) {
+    console.log("QR token not found:", token);
+    return null
+  }
   
   // Check if expired
   if (new Date(data.expiresAt) < new Date()) {
+    console.log("QR token expired:", token);
     activeQRTokens.delete(token)
     return null
   }
   
+  console.log("QR token found:", token, data);
   return data
 }
 
 export function deleteQRToken(token: string): void {
+  console.log("Deleting QR token:", token);
   activeQRTokens.delete(token)
 }
 
 // Session operations
 export function storeSession(sessionId: string, data: SessionData): void {
-  activeSessions.set(sessionId, data)
+  console.log("Storing session:", sessionId, data);
+  activeSessions.set(sessionId, JSON.parse(JSON.stringify(data))) // Deep copy
 }
 
 export function getSession(sessionId: string): SessionData | null {
-  return activeSessions.get(sessionId) || null
+  const session = activeSessions.get(sessionId)
+  console.log("Getting session:", sessionId, session);
+  return session ? JSON.parse(JSON.stringify(session)) : null // Deep copy
 }
 
 export function updateSessionAttendance(sessionId: string, attendanceList: AttendanceListItem[]): void {
   const session = activeSessions.get(sessionId)
   if (session) {
-    session.attendanceList = attendanceList
-    activeSessions.set(sessionId, session)
+    console.log("Updating session attendance:", sessionId, attendanceList);
+    // Create a new session object instead of modifying in place
+    const updatedSession: SessionData = {
+      ...session,
+      attendanceList: attendanceList.map(item => ({ ...item })) // Deep copy of attendance items
+    }
+    activeSessions.set(sessionId, updatedSession)
+  } else {
+    console.log("Session not found for update:", sessionId);
   }
 }
 
 export function deleteSession(sessionId: string): void {
+  console.log("Deleting session:", sessionId);
   activeSessions.delete(sessionId)
 }
 

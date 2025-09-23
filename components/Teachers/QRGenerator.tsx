@@ -66,7 +66,7 @@ interface QRTokenData {
   expiresAt: string
   type: string
   scanUrl: string
-  students: { student_id: number; first_name: string; last_name: string }[] // <-- MAKE SURE THIS EXISTS
+  students: { student_id: number; first_name: string; last_name: string }[]
 }
 
 export function QRGenerator({
@@ -89,7 +89,7 @@ export function QRGenerator({
   const attendancePollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const sessionDuration = 480; // 8 minutes in seconds
-  const qrLifetime = 10; // 3 seconds per QR code
+  const qrLifetime = 10; // 10 seconds per QR code (as you updated)
 
   const currentClasses = classesBySemester[Number(selectedSemester)] || [];
 
@@ -149,24 +149,39 @@ export function QRGenerator({
     return () => clearInterval(interval);
   }, [isSessionActive, timeRemaining, stopAttendanceSession]);
 
-  const pollAttendanceUpdates = async (currentSessionId: string) => {
-    try {
-      const response = await fetch(
-        `/api/attendance/session/${currentSessionId}/status`,
-        {
-          headers: {
-            Authorization: `Bearer ${teacherId}`,
-          },
-        }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setAttendanceList(data.attendanceList || []);
+  // In components/teachers/qr-generator.tsx
+const pollAttendanceUpdates = async (currentSessionId: string) => {
+  try {
+    console.log("Polling attendance for session:", currentSessionId);
+    const response = await fetch(
+      `/api/attendance/session/${currentSessionId}/status`,
+      {
+        headers: {
+          Authorization: `Bearer ${teacherId}`,
+        },
       }
-    } catch (error) {
-      console.error("Error polling attendance:", error);
+    );
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log("Attendance poll response:", data);
+      console.log("Previous attendance list length:", attendanceList.length);
+      console.log("New attendance list length:", data.attendanceList?.length);
+      
+      // Only update if there's actually new data
+      if (data.attendanceList && JSON.stringify(data.attendanceList) !== JSON.stringify(attendanceList)) {
+        console.log("Updating attendance list with new data");
+        setAttendanceList(data.attendanceList || []);
+      } else {
+        console.log("No change in attendance data");
+      }
+    } else {
+      console.error("Failed to poll attendance:", response.status);
     }
-  };
+  } catch (error) {
+    console.error("Error polling attendance:", error);
+  }
+};
 
   const generateSingleQR = async (
     currentSessionId: string,
@@ -196,7 +211,7 @@ export function QRGenerator({
         expiresAt: new Date(Date.now() + qrLifetime * 1000).toISOString(),
         type: "attendance",
         scanUrl: `/api/attendance/scan/${qrToken}`,
-        students: selectedClassData.students, // <-- ADD THIS LINE
+        students: selectedClassData.students,
       };
 
       const qrString = JSON.stringify(attendanceData);
@@ -261,6 +276,7 @@ export function QRGenerator({
       }
 
       const data = await response.json();
+      console.log("Session initialized:", data);
       setAttendanceList(data.attendanceList || []);
       return true;
     } catch (error) {
@@ -302,7 +318,7 @@ export function QRGenerator({
       return;
     }
 
-    // Generate new QR every 3 seconds
+    // Generate new QR every 10 seconds
     regenerationIntervalRef.current = setInterval(async () => {
       qrCounter++;
       await generateSingleQR(newSessionId, qrCounter);
@@ -531,8 +547,7 @@ export function QRGenerator({
               Live Attendance
             </CardTitle>
             <CardDescription>
-              {selectedClassData.subject_name} ({selectedClassData.subject_code}
-              )
+              {selectedClassData.subject_name} ({selectedClassData.subject_code})
             </CardDescription>
           </CardHeader>
           <CardContent>

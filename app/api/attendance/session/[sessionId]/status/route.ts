@@ -1,3 +1,4 @@
+// pages/api/attendance/session/[sessionId]/status/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db"
 import { getSession, updateSessionAttendance } from "@/lib/attendance-store"
@@ -23,15 +24,17 @@ export async function GET(
   try {
     // Await the params since it's a Promise in the App Router
     const { sessionId } = await params
+    console.log("Session status request for:", sessionId);
     
-    // Get session data from Redis
+    // Get session data from memory
     const sessionData = await getSession(sessionId)
     
     if (!sessionData) {
+      console.log("Session not found:", sessionId);
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    // Verify teacher authorization (could be done with JWT in header)
+    // Verify teacher authorization
     const authHeader = req.headers.get('authorization')
     if (!authHeader?.startsWith('Bearer ') || authHeader.substring(7) !== sessionData.teacherId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -39,6 +42,12 @@ export async function GET(
 
     // Fetch current attendance from database for this session
     const currentDate = sessionData.date
+    console.log("Fetching attendance for:", {
+      teacherId: sessionData.teacherId,
+      subjectId: sessionData.subjectId,
+      date: currentDate
+    });
+
     const attendanceRecordsResult = await executeQuery`
       SELECT 
         a.student_id,
@@ -51,24 +60,29 @@ export async function GET(
       WHERE a.teacher_id = ${parseInt(sessionData.teacherId)}
       AND a.subject_id = ${sessionData.subjectId}
       AND a.attendance_date = ${currentDate}
+      ORDER BY a.attendance_date DESC
     `
 
     // Type the database results properly
     const attendanceRecords = attendanceRecordsResult as unknown as DatabaseAttendanceRecord[]
 
-    // Create a map of attendance records
+    // Create a map of attendance records (latest record per student)
     const attendanceMap = new Map<string, DatabaseAttendanceRecord>()
     attendanceRecords.forEach((record) => {
-      attendanceMap.set(record.student_id.toString(), record)
+      // Only keep the first (latest) record for each student
+      if (!attendanceMap.has(record.student_id.toString())) {
+        attendanceMap.set(record.student_id.toString(), record)
+      }
     })
 
-    // Update attendance list with current status
+    console.log("Database attendance records:", Array.from(attendanceMap.entries()));
+
+    // Update attendance list with current status from database
     const updatedAttendanceList = sessionData.students.map((student: Student) => {
       const attendanceRecord = attendanceMap.get(student.student_id.toString())
-      const status: "present" | "absent" =
-        attendanceRecord && (attendanceRecord.status === "present" || attendanceRecord.status === "absent")
-          ? (attendanceRecord.status as "present" | "absent")
-          : "absent"
+      const status: "present" | "absent" = 
+        attendanceRecord?.status === "present" ? "present" : "absent"
+      
       return {
         student_id: student.student_id,
         first_name: student.first_name,
@@ -78,8 +92,13 @@ export async function GET(
       }
     })
 
-    // Update session data in Redis
+    console.log("Updated attendance list:", updatedAttendanceList);
+
+    // CRITICAL: Update session data in memory with the latest attendance data
     await updateSessionAttendance(sessionId, updatedAttendanceList)
+
+    // Get the updated session data to return
+    const updatedSession = await getSession(sessionId)
 
     return NextResponse.json({ 
       success: true,
