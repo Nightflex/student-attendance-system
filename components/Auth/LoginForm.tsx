@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Eye, EyeOff, User } from "lucide-react" // Removed Mail icon
+import { Eye, EyeOff, User, Mail } from "lucide-react"
 import axios from "axios"
 import type { LoginRequest, LoginResponse, User as UserType } from "@/lib/types"
 import { useRouter } from "next/navigation"
@@ -23,14 +23,15 @@ interface AxiosError {
   }
 }
 
-export function LoginForm({ onLogin}: LoginFormProps) {
+export function LoginForm({ onLogin }: LoginFormProps) {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
   const [formData, setFormData] = useState<LoginRequest>({
-    roll_number: "", // Changed from email to roll_number
+    roll_number: "", // For students
+    email: "",       // For teachers/admins
     password: "",
     user_type: "student",
   })
@@ -40,11 +41,27 @@ export function LoginForm({ onLogin}: LoginFormProps) {
     setIsLoading(true)
     setError("")
 
-    // Simple roll number validation (adjust as needed)
-    if (!formData.roll_number || formData.roll_number.trim().length < 1) {
-      setError("Please enter your roll number")
-      setIsLoading(false)
-      return
+    // Validation based on user type
+    if (formData.user_type === "student") {
+      if (!formData.roll_number || formData.roll_number.trim().length < 1) {
+        setError("Please enter your roll number")
+        setIsLoading(false)
+        return
+      }
+    } else {
+      // For teachers and admins
+      if (!formData.email || formData.email.trim().length < 1) {
+        setError("Please enter your email")
+        setIsLoading(false)
+        return
+      }
+      // Simple email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email)) {
+        setError("Please enter a valid email address")
+        setIsLoading(false)
+        return
+      }
     }
 
     try {
@@ -57,22 +74,18 @@ export function LoginForm({ onLogin}: LoginFormProps) {
         onLogin(response.data.user)
         
         // Redirect based on user role
-        if (response.data.user.role) {
-          switch (response.data.user.role) {
-            case 'student':
-              router.push('/dashboard/student')
-              break
-            case 'teacher':
-              router.push('/dashboard/teacher')
-              break
-            case 'admin':
-              router.push('/dashboard/admin')
-              break
-            default:
-              router.push('/dashboard')
-          }
-        } else {
-          router.push('/dashboard')
+        switch (response.data.user.role) {
+          case 'student':
+            router.push('/dashboard/student')
+            break
+          case 'teacher':
+            router.push('/dashboard/teacher')
+            break
+          case 'admin':
+            router.push('/dashboard/admin')
+            break
+          default:
+            router.push('/dashboard')
         }
       } else {
         setError(response.data.message || "Login failed")
@@ -122,22 +135,40 @@ export function LoginForm({ onLogin}: LoginFormProps) {
             </div>
           </div>
 
-          {/* Roll Number Input */}
-          <div className="space-y-2">
-            <Label htmlFor="roll_number_login">Roll Number *</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="roll_number_login"
-                type="text"
-                placeholder="Enter your roll number"
-                className="pl-10"
-                value={formData.roll_number}
-                onChange={(e) => handleInputChange("roll_number", e.target.value)}
-                required
-              />
+          {/* Conditional Input Field */}
+          {formData.user_type === "student" ? (
+            <div className="space-y-2">
+              <Label htmlFor="roll_number_login">Roll Number *</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="roll_number_login"
+                  type="text"
+                  placeholder="Enter your roll number"
+                  className="pl-10"
+                  value={formData.roll_number || ""}
+                  onChange={(e) => handleInputChange("roll_number", e.target.value)}
+                  required
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="email_login">Email *</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email_login"
+                  type="email"
+                  placeholder="Enter your email"
+                  className="pl-10"
+                  value={formData.email || ""}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          )}
 
           {/* Password Input */}
           <div className="space-y-2">

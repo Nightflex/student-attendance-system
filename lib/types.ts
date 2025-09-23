@@ -153,6 +153,7 @@ export interface CreateTeacherRequest {
 
 export interface LoginRequest {
   roll_number: string;
+  email?: string;
   password: string; // Plaintext
   user_type: "student" | "teacher" | "admin";
 }
@@ -160,16 +161,16 @@ export interface LoginRequest {
 // Updated LoginResponse to include the JWT token
 export interface LoginResponse {
   success: boolean;
-  user?: User; // Use the User type defined below
-  token?: string; // JWT token for successful login
-  message?: string;
+  user?: User;
+  token?: string;
+  message: string;
 }
 
 // Unified User type for responses, combining relevant fields
 export interface User {
   id: string; // Student ID or Teacher ID
   name: string;
-  email: string;
+  email?: string;
   role: string;
   // Student specific fields
   roll_number?: string;

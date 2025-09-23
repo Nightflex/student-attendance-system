@@ -37,17 +37,15 @@ if (!process.env.JWT_SECRET) {
 
 export async function authenticateUser(loginData: LoginRequest): Promise<LoginResponse> {
   try {
-    // Use roll_number instead of email
-    const rollNumber = loginData.roll_number?.trim();
-    
-    if (!rollNumber) {
-      return { success: false, message: "Roll number is required." };
-    }
-
     let result: UserRecord[] = [];
 
     switch (loginData.user_type) {
       case "student":
+        const rollNumber = loginData.roll_number?.trim();
+        if (!rollNumber) {
+          return { success: false, message: "Roll number is required for students." };
+        }
+
         const studentResult = await executeQuery`
           SELECT 
             student_id AS id, first_name, last_name, email, password_hash,
@@ -59,26 +57,33 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
         break;
 
       case "teacher":
+        const email = loginData.email?.toLowerCase().trim();
+        if (!email) {
+          return { success: false, message: "Email is required for teachers." };
+        }
+
         const teacherResult = await executeQuery`
           SELECT 
             teacher_id AS id, first_name, last_name, email, password_hash,
             department_id, designation, phone_number
           FROM teachers
-          WHERE email = ${rollNumber} AND is_active = true
-          // For teachers, you might want to keep email as identifier
-          // Or create a teacher_id field if needed
+          WHERE email = ${email} AND is_active = true
         `;
         result = teacherResult as unknown as UserRecord[];
         break;
 
       case "admin":
+        const adminEmail = loginData.email?.toLowerCase().trim();
+        if (!adminEmail) {
+          return { success: false, message: "Email is required for admins." };
+        }
+
         const adminResult = await executeQuery`
           SELECT 
             teacher_id AS id, first_name, last_name, email, password_hash,
             department_id, designation, phone_number
           FROM teachers
-          WHERE email = ${rollNumber} AND is_active = true AND LOWER(designation) LIKE '%admin%'
-          // For admins, keep email as identifier
+          WHERE email = ${adminEmail} AND is_active = true AND LOWER(designation) LIKE '%admin%'
         `;
         result = adminResult as unknown as UserRecord[];
         break;
@@ -88,10 +93,10 @@ export async function authenticateUser(loginData: LoginRequest): Promise<LoginRe
     }
 
     const userRecord = result[0];
-    if (!userRecord) return { success: false, message: "Invalid roll number or password." };
+    if (!userRecord) return { success: false, message: "Invalid credentials." };
 
     const isValidPassword = await bcrypt.compare(loginData.password, userRecord.password_hash);
-    if (!isValidPassword) return { success: false, message: "Invalid roll number or password." };
+    if (!isValidPassword) return { success: false, message: "Invalid credentials." };
 
     // Build user object
     let additionalData: Record<string, string | number | null> = {};

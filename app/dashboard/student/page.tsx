@@ -1,3 +1,4 @@
+// app/dashboard/student/page.tsx
 "use server";
 
 import { StudentDashboardClient } from "@/components/Students/StudentDashboardClient";
@@ -41,31 +42,40 @@ export default async function StudentDashboardPage() {
   let payload: JWTPayload;
   try {
     // Verify token with jose
-    const verified = await jwtVerify(token, new TextEncoder().encode(process.env.JWT_SECRET!));
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret");
+    const verified = await jwtVerify(token, secret);
     payload = verified.payload as JWTPayload;
   } catch (error) {
-    throw new Error("Invalid token — should have been caught by middleware:"+ error);
+    console.error("Token verification error:", error); // Add logging
+    throw new Error("Invalid token — should have been caught by middleware");
   }
 
   if (payload.role !== "student") {
     throw new Error("Unauthorized access — should have been caught by middleware");
   }
 
-  const studentRowsResult = await executeQuery`
-    SELECT 
-      student_id AS id,
-      first_name,
-      last_name,
-      email,
-      roll_number,
-      course_id,
-      semester,
-      batch_year,
-      phone_number
-    FROM students
-    WHERE student_id = ${Number(payload.id)} AND is_active = true
-  `;
-  const studentRows = studentRowsResult as unknown as StudentRow[];
+  // Add error handling for database query
+  let studentRows: StudentRow[] = [];
+  try {
+    const studentRowsResult = await executeQuery`
+      SELECT 
+        student_id AS id,
+        first_name,
+        last_name,
+        email,
+        roll_number,
+        course_id,
+        semester,
+        batch_year,
+        phone_number
+      FROM students
+      WHERE student_id = ${Number(payload.id)} AND is_active = true
+    `;
+    studentRows = studentRowsResult as unknown as StudentRow[];
+  } catch (error) {
+    console.error("Database query error:", error);
+    throw new Error("Failed to fetch student data");
+  }
 
   if (studentRows.length === 0) {
     throw new Error("Student not found — middleware should block this case");
@@ -73,12 +83,19 @@ export default async function StudentDashboardPage() {
 
   const student = studentRows[0];
 
-  const courseRowsResult = await executeQuery`
-    SELECT course_name, course_code
-    FROM courses
-    WHERE course_id = ${student.course_id}
-  `;
-  const courseRows = courseRowsResult as unknown as CourseRow[];
+  // Add error handling for course query
+  let courseRows: CourseRow[] = [];
+  try {
+    const courseRowsResult = await executeQuery`
+      SELECT course_name, course_code
+      FROM courses
+      WHERE course_id = ${student.course_id}
+    `;
+    courseRows = courseRowsResult as unknown as CourseRow[];
+  } catch (error) {
+    console.error("Course query error:", error);
+    // Don't throw error, just use default values
+  }
 
   const course = courseRows[0] || { course_name: "Unknown", course_code: "" };
 
