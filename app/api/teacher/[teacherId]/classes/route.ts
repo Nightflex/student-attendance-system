@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db"
 
-interface TeacherAssignment {
-  assignment_id: number;
-  subject_id: number;
-  semester: number;
+interface StudentEnrollment {
+  student_id: number;
+  first_name: string;
+  last_name: string;
 }
 
 interface ClassData {
@@ -13,7 +13,7 @@ interface ClassData {
   subject_name: string;
   subject_code: string;
   semester: number;
-  students: string; // JSON string
+  students: { student_id: number; first_name: string; last_name: string }[];
 }
 
 export async function GET(
@@ -32,78 +32,72 @@ export async function GET(
       return NextResponse.json({ error: "Invalid teacher ID" }, { status: 400 })
     }
     
-    // Start with a simple query to test the connection
-    try {
-      const testQuery = await executeQuery`SELECT 1 as test`
-      console.log("Database connection test:", testQuery)
-    } catch (dbError) {
-      console.error("Database connection failed:", dbError)
-      return NextResponse.json({ error: "Database connection failed" }, { status: 500 })
-    }
-    
     // Check if teacher exists
-    try {
-      const teacherExists = await executeQuery`
-        SELECT teacher_id FROM teachers WHERE teacher_id = ${teacherId} LIMIT 1
-      ` as unknown as { teacher_id: number }[];
-      console.log("Teacher exists check:", teacherExists)
-      
-      if (!teacherExists || teacherExists.length === 0) {
-        return NextResponse.json({ error: "Teacher not found" }, { status: 404 })
-      }
-    } catch (error) {
-      console.error("Teacher check error:", error)
-      return NextResponse.json({ error: "Error checking teacher" }, { status: 500 })
+    const teacherExists = await executeQuery`
+      SELECT teacher_id FROM teachers WHERE teacher_id = ${teacherId} LIMIT 1
+    ` as unknown as { teacher_id: number }[];
+    
+    if (!teacherExists || teacherExists.length === 0) {
+      return NextResponse.json({ error: "Teacher not found" }, { status: 404 })
     }
     
-    // Check teacher assignments
-    try {
-      const assignmentsResult = await executeQuery`
-        SELECT assignment_id, subject_id, semester 
-        FROM teacher_subject_assignments 
-        WHERE teacher_id = ${teacherId}
-        ${semester ? `AND semester = ${Number(semester)}` : ""}
-      `
-      const assignments = assignmentsResult as unknown as TeacherAssignment[];
-      console.log("Teacher assignments:", assignments)
-      
-      if (!assignments || assignments.length === 0) {
-        console.log("No assignments found for teacher")
-        return NextResponse.json([])
-      }
-    } catch (error) {
-      console.error("Assignments check error:", error)
-      return NextResponse.json({ error: "Error checking assignments" }, { status: 500 })
-    }
+    // MAIN FIX: Use class_schedule instead of teacher_subject_assignments
+    const classesResult = await executeQuery`
+      SELECT 
+        cs.schedule_id as schedule_id,
+        s.subject_id, 
+        s.subject_name, 
+        s.subject_code, 
+        cs.semester
+      FROM class_schedule cs
+      JOIN subjects s ON s.subject_id = cs.subject_id
+      WHERE cs.teacher_id = ${teacherId}
+      ${semester ? `AND cs.semester = ${Number(semester)}` : ""}
+      ORDER BY cs.semester, s.subject_name
+    `
     
-    // Main query - simplified first
-    try {
-      const classesResult = await executeQuery`
-        SELECT 
-          tsa.assignment_id as schedule_id,
-          s.subject_id, 
-          s.subject_name, 
-          s.subject_code, 
-          tsa.semester,
-          '[]'::json AS students
-        FROM teacher_subject_assignments tsa
-        JOIN subjects s ON s.subject_id = tsa.subject_id
-        WHERE tsa.teacher_id = ${teacherId}
-        ${semester ? `AND tsa.semester = ${Number(semester)}` : ""}
-        ORDER BY s.subject_name
-      `
-      const classes = classesResult as unknown as ClassData[];
-      
-      console.log("Classes query result:", classes)
-      return NextResponse.json(classes)
-      
-    } catch (error) {
-      console.error("Main query error:", error)
-      return NextResponse.json({ error: "Error fetching classes" }, { status: 500 })
-    }
+    const classes = classesResult as unknown as {
+      schedule_id: number;
+      subject_id: number;
+      subject_name: string;
+      subject_code: string;
+      semester: number;
+    }[];
+    
+    // For each class, fetch enrolled students
+    const classesWithStudents = await Promise.all(
+      classes.map(async (classItem) => {
+        // FIX: Use schedule_id to match student_enrollments table
+        const studentsResult = await executeQuery`
+          SELECT 
+            se.student_id,
+            s.first_name,
+            s.last_name
+          FROM student_enrollments se
+          JOIN students s ON se.student_id = s.student_id
+          WHERE se.schedule_id = ${classItem.schedule_id}
+          AND se.status = 'active'
+          ORDER BY s.first_name, s.last_name
+        `
+        
+        const students = studentsResult as unknown as StudentEnrollment[];
+        
+        return {
+          ...classItem,
+          students: students.map(student => ({
+            student_id: student.student_id,
+            first_name: student.first_name,
+            last_name: student.last_name
+          }))
+        }
+      })
+    )
+    
+    console.log("Classes with students:", classesWithStudents)
+    return NextResponse.json(classesWithStudents)
     
   } catch (error) {
-    console.error("Unexpected error in API route:", error)
+    console.error("Error in API route:", error)
     return NextResponse.json({ 
       error: "Internal server error", 
       details: error instanceof Error ? error.message : "Unknown error" 
