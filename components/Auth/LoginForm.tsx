@@ -13,7 +13,6 @@ import { useRouter } from "next/navigation"
 
 interface LoginFormProps {
   onLogin: (userData: UserType) => void
-  onSwitchToRegister: () => void
 }
 
 interface AxiosError {
@@ -24,7 +23,7 @@ interface AxiosError {
   }
 }
 
-export function LoginForm({ onLogin, onSwitchToRegister }: LoginFormProps) {
+export function LoginForm({ onLogin}: LoginFormProps) {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
