@@ -1,20 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeQuery } from "@/lib/db";
 
-export async function GET(req: NextRequest, { params }: { params: { studentId: string } }) {
-  const studentId = params.studentId;
+interface Student {
+  course_id: number;
+}
 
+interface TimetableEntry {
+  name: string;
+  code: string;
+  teacherName: string;
+  day: string;
+  startTime: string;
+  endTime: string;
+}
+
+export async function GET(
+  req: NextRequest, 
+  { params }: { params: Promise<{ studentId: string }> }
+) {
   try {
+    // Await the params since it's a Promise in the App Router
+    const { studentId } = await params;
+
     // Get student's course_id
-    const student = await executeQuery`
+    const studentResult = await executeQuery`
       SELECT course_id FROM students WHERE student_id = ${studentId} AND is_active = true
     `;
+    const student = studentResult as unknown as Student[];
+    
     if (!student[0]) return NextResponse.json({ success: false, message: "Student not found" });
 
     const courseId = student[0].course_id;
 
     // Fetch timetable for that course
-    const timetable = await executeQuery`
+    const timetableResult = await executeQuery`
       SELECT 
         s.subject_name AS name,
         s.subject_code AS code,
@@ -37,10 +56,11 @@ export async function GET(req: NextRequest, { params }: { params: { studentId: s
         END,
         cs.start_time
     `;
+    const timetable = timetableResult as unknown as TimetableEntry[];
 
     return NextResponse.json({ success: true, data: timetable });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ success: false, message: "Failed to fetch timetable" });
+    return NextResponse.json({ success: false, message: "Failed to fetch timetable" }, { status: 500 });
   }
 }

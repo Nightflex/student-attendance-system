@@ -1,10 +1,13 @@
-// app/api/student/[studentId]/attendance/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { executeQuery } from "@/lib/db";
 
-export async function GET(request: Request, { params }: { params: { studentId: string } }) {
+export async function GET(
+  request: NextRequest, 
+  { params }: { params: Promise<{ studentId: string }> }
+) {
   try {
-    const { studentId } = params;
+    // Await the params since it's a Promise in the App Router
+    const { studentId } = await params;
 
     // Fetch attendance joined with subject table
     const records = await executeQuery`

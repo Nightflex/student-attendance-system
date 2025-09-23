@@ -3,6 +3,10 @@ import { authenticateUser } from "@/lib/auth/login";
 import { SignJWT } from "jose";
 import type { LoginRequest, LoginResponse } from "@/lib/types";
 
+interface DatabaseError extends Error {
+  message: string;
+}
+
 export async function POST(request: Request) {
   try {
     const body: LoginRequest = await request.json();
@@ -50,7 +54,8 @@ export async function POST(request: Request) {
       return NextResponse.json(loginResult, { status: 401 });
     }
   } catch (error) {
-    console.error("Login API Error:", error);
+    const dbError = error as DatabaseError;
+    console.error("Login API Error:", dbError);
     return NextResponse.json(
       { success: false, message: "An error occurred during login. Please try again." },
       { status: 500 }

@@ -1,9 +1,29 @@
 import { NextRequest, NextResponse } from "next/server"
 import { executeQuery } from "@/lib/db"
 
-export async function GET(req: NextRequest, { params }: { params: { teacherId: string } }) {
+interface TeacherAssignment {
+  assignment_id: number;
+  subject_id: number;
+  semester: number;
+}
+
+interface ClassData {
+  schedule_id: number;
+  subject_id: number;
+  subject_name: string;
+  subject_code: string;
+  semester: number;
+  students: string; // JSON string
+}
+
+export async function GET(
+  req: NextRequest, 
+  { params }: { params: Promise<{ teacherId: string }> }
+) {
   try {
-    const teacherId = Number(params.teacherId)
+    // Await the params since it's a Promise in the App Router
+    const { teacherId: teacherIdParam } = await params;
+    const teacherId = Number(teacherIdParam);
     const semester = req.nextUrl.searchParams.get("semester")
     
     console.log("API called with:", { teacherId, semester, isValidTeacherId: !isNaN(teacherId) })
@@ -25,7 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: { teacherId: s
     try {
       const teacherExists = await executeQuery`
         SELECT teacher_id FROM teachers WHERE teacher_id = ${teacherId} LIMIT 1
-      `
+      ` as unknown as { teacher_id: number }[];
       console.log("Teacher exists check:", teacherExists)
       
       if (!teacherExists || teacherExists.length === 0) {
@@ -38,12 +58,13 @@ export async function GET(req: NextRequest, { params }: { params: { teacherId: s
     
     // Check teacher assignments
     try {
-      const assignments = await executeQuery`
+      const assignmentsResult = await executeQuery`
         SELECT assignment_id, subject_id, semester 
         FROM teacher_subject_assignments 
         WHERE teacher_id = ${teacherId}
         ${semester ? `AND semester = ${Number(semester)}` : ""}
       `
+      const assignments = assignmentsResult as unknown as TeacherAssignment[];
       console.log("Teacher assignments:", assignments)
       
       if (!assignments || assignments.length === 0) {
@@ -57,7 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: { teacherId: s
     
     // Main query - simplified first
     try {
-      const classes = await executeQuery`
+      const classesResult = await executeQuery`
         SELECT 
           tsa.assignment_id as schedule_id,
           s.subject_id, 
@@ -71,6 +92,7 @@ export async function GET(req: NextRequest, { params }: { params: { teacherId: s
         ${semester ? `AND tsa.semester = ${Number(semester)}` : ""}
         ORDER BY s.subject_name
       `
+      const classes = classesResult as unknown as ClassData[];
       
       console.log("Classes query result:", classes)
       return NextResponse.json(classes)
