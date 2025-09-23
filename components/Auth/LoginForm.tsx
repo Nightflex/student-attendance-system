@@ -206,6 +206,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             </div>
           )}
+          
 
           <Button
             type="submit"
